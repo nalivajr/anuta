@@ -14,4 +14,17 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"/>
 
+    <com.alice.sample.ui.CustomView
+        android:id="@+id/cv_test"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingTop="20dp"/>
+
+    <fragment
+        android:id="@+id/fr_sample"
+        android:name="com.alice.sample.ui.fragments.SampleFragment"
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        android:layout_alignParentBottom="true"/>
+
 </RelativeLayout>

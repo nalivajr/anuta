@@ -1,6 +1,5 @@
-package com.alice;
+package com.alice.sample;
 
-import android.app.Application;
 import android.content.BroadcastReceiver;
 import android.content.ComponentCallbacks;
 import android.content.ComponentName;
@@ -27,7 +26,8 @@ import android.os.Looper;
 import android.os.UserHandle;
 import android.view.Display;
 
-import com.alice.tools.Logger;
+import com.alice.components.AliceApplication;
+import com.alice.sample.tools.Logger;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -40,14 +40,13 @@ import java.io.InputStream;
  * Created by Sergey Nalivko.
  * email: snalivko93@gmail.com
  */
-public class AsbsApplication extends Application {
+public class TestApplication extends AliceApplication {
 
-    private Logger logger = new Logger(AsbsApplication.class);
+    private Logger logger = new Logger(TestApplication.class);
 
     @Override
     public void onCreate() {
         super.onCreate();
-        logger.info("onCreate");
     }
 
     // This method is never called, do not add any logic here

@@ -1,4 +1,4 @@
-package com.alice.tools;
+package com.alice.sample.tools;
 
 import android.support.annotation.NonNull;
 import android.util.Log;

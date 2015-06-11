@@ -10,7 +10,16 @@ import java.lang.annotation.Target;
  * email: snalivko93@gmail.com
  */
 @Retention(value = RetentionPolicy.RUNTIME)
-@Target(value = ElementType.FIELD)
+@Target(value = ElementType.TYPE)
 public @interface AutoView {
-    public int id();
+    /**
+     * Specifies the resource layout id
+     * @return the id of layout
+     */
+    public int layoutId();
+
+    /**
+     * If true, then all sub views in hierarchy will be checked and initialized too
+     */
+    public boolean recursive() default false;
 }

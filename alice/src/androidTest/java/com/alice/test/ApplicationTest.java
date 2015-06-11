@@ -1,4 +1,4 @@
-package com.nalivajr.android.adtools;
+package com.alice.test;
 
 import android.app.Application;
 import android.test.ApplicationTestCase;

@@ -1,4 +1,4 @@
-package com.nalivajr.android.asbs;
+package com.alice.sample.test;
 
 import android.app.Application;
 import android.test.ApplicationTestCase;
