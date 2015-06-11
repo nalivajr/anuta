@@ -1,1 +1,1 @@
-include ':adtools', ':app'
+include ':alice', ':app'
