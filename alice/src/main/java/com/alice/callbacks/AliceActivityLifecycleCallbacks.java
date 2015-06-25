@@ -21,7 +21,8 @@ public class AliceActivityLifecycleCallbacks implements Application.ActivityLife
         try {
             Alice.setContentView(activity);
         } catch (NotAnnotatedActivityUsedException e) {
-            Log.i(TAG, String.format("Activity %s can't be initialized automatically as it is not annotated wits %s", activity.getClass().getName(), AutoActivity.class.getName()));
+            Log.i(TAG, String.format("Activity %s can't be initialized automatically as it is not annotated wits %s",
+                    activity.getClass().getName(), AutoActivity.class.getName()));
         }
     }
 

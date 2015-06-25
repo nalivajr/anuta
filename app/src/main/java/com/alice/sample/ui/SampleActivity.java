@@ -1,13 +1,12 @@
-package com.alice.sample;
+package com.alice.sample.ui;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.util.Log;
 import android.widget.TextView;
 
 import com.alice.annonatations.AutoActivity;
 import com.alice.annonatations.InnerView;
-import com.alice.sample.ui.CustomView;
+import com.alice.sample.R;
 
 @AutoActivity(layoutId = R.layout.ac_main, recursive = true)
 public class SampleActivity extends Activity {
@@ -21,7 +20,6 @@ public class SampleActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        view.setText("this is text");
-        Log.i("MainActivity", "[CBT] onCreate");
+        view.setText("This is text");
     }
 }

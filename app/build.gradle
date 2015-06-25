@@ -26,6 +26,5 @@ android {
 dependencies {
     compile project(':alice')
     compile 'com.android.support:appcompat-v7:21.0.3'
-    compile 'com.jakewharton:butterknife:6.1.0'
-    compile 'javax.annotation:jsr250-api:1.0'
+    compile 'com.android.support:recyclerview-v7:21.0.3'
 }
