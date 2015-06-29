@@ -5,8 +5,8 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.widget.ListView;
 
-import com.alice.annonatations.AutoActivity;
-import com.alice.annonatations.InnerView;
+import com.alice.annonatations.ui.AutoActivity;
+import com.alice.annonatations.ui.InnerView;
 import com.alice.sample.R;
 import com.alice.sample.adapters.SampleAliceAdapter;
 import com.alice.sample.models.Person;

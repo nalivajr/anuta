@@ -1,6 +1,6 @@
 package com.alice.exceptions;
 
-import com.alice.annonatations.AutoActivity;
+import com.alice.annonatations.ui.AutoActivity;
 
 /**
  * Created by Sergey Nalivko.
@@ -9,6 +9,6 @@ import com.alice.annonatations.AutoActivity;
 public class NotAnnotatedActivityUsedException extends RuntimeException {
 
     public NotAnnotatedActivityUsedException() {
-        super("Target activity should be annotated with %s and specify layout resource id" + AutoActivity.class );
+        super("Target activity should be annotated with %s and specify layout resource id " + AutoActivity.class );
     }
 }

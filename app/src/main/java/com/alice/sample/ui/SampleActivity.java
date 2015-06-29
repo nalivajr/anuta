@@ -4,8 +4,8 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.widget.TextView;
 
-import com.alice.annonatations.AutoActivity;
-import com.alice.annonatations.InnerView;
+import com.alice.annonatations.ui.AutoActivity;
+import com.alice.annonatations.ui.InnerView;
 import com.alice.sample.R;
 
 @AutoActivity(layoutId = R.layout.ac_main, recursive = true)

@@ -15,7 +15,7 @@
 #-keepclassmembers class fqcn.of.javascript.interface.for.webview {
 #   public *;
 #}
--keep @com.alice.annonatations.AutoView public class *
--keep @com.alice.annonatations.AutoActivity public class *
+-keep @com.alice.annonatations.ui.AutoView public class *
+-keep @com.alice.annonatations.ui.AutoActivity public class *
 
 -keepattributes *Annotation*

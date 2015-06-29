@@ -5,16 +5,21 @@ import android.app.Fragment;
 import android.content.Context;
 import android.content.res.Resources;
 import android.content.res.XmlResourceParser;
+import android.provider.BaseColumns;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import com.alice.annonatations.AutoActivity;
-import com.alice.annonatations.AutoFragment;
-import com.alice.annonatations.AutoView;
-import com.alice.annonatations.InnerView;
+import com.alice.annonatations.db.Column;
+import com.alice.annonatations.db.Entity;
+import com.alice.annonatations.db.Id;
+import com.alice.annonatations.ui.AutoActivity;
+import com.alice.annonatations.ui.AutoFragment;
+import com.alice.annonatations.ui.AutoView;
+import com.alice.annonatations.ui.InnerView;
 import com.alice.exceptions.NotAnnotatedActivityUsedException;
+import com.alice.exceptions.NotAnnotatedEntityException;
 import com.alice.exceptions.NotAnnotatedFragmentUsedException;
 
 import org.xmlpull.v1.XmlPullParser;
@@ -23,6 +28,7 @@ import org.xmlpull.v1.XmlPullParserException;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -243,5 +249,171 @@ public class Alice {
                 break;
             }
         }
+    }
+
+    public static abstract class DatabaseTools {
+
+        /**
+         * Generates tables creation script for the given list of entity class
+         * @param entityClasses classes of entities
+         * @return string, representing table creation script;
+         * @throws NotAnnotatedEntityException if class is not annotated with {@link Entity}
+         */
+        public static String generateCreateTableScript(List<Class> entityClasses) {
+            StringBuilder builder = new StringBuilder();
+            for (Class entityClass : entityClasses) {
+                builder.append(generateCreateTableScript(entityClass));
+            }
+            return builder.toString();
+        }
+
+        /**
+         * Generates table creation script for the given entity class
+         * @param cls the class of entity
+         * @return string, representing table creation script;
+         * @throws NotAnnotatedEntityException if class is not annotated with {@link Entity}
+         */
+        public static String generateCreateTableScript(Class cls) {
+            Entity entityAnnotation = (Entity) cls.getAnnotation(Entity.class);
+            if (entityAnnotation == null) {
+                throw new NotAnnotatedEntityException();
+            }
+            String tableName = entityAnnotation.tableName();
+            if (tableName.isEmpty()) {
+                tableName = cls.getSimpleName();
+            }
+
+            StringBuilder builder = new StringBuilder();
+            builder.append(String.format("DROP TABLE %s;", tableName));
+            builder.append(String.format("CREATE TABLE %s (", tableName));
+            List<Field> columnFields = extractFields(entityAnnotation, cls);
+
+            for (Field field : columnFields) {
+                String columnScript = buildColumnDefinition(field);
+                builder.append(columnScript);
+                builder.append(',');
+            }
+
+            String primaryKeyScript = buildPrimaryKeyScript(columnFields);
+            builder.append(primaryKeyScript);
+            builder.append(')').append(';');
+            return builder.toString();
+        }
+
+        private static List<Field> extractFields(Entity entityAnnotation, Class cls) {
+            List<Field> resultList = new ArrayList<>();
+            resultList.addAll(Arrays.asList(cls.getDeclaredFields()));
+
+            Class processing = cls;
+            Entity.InheritancePolicy policy = entityAnnotation.inheritColumns();
+            while (entityAnnotation != null && policy != Entity.InheritancePolicy.NO) {
+                processing = processing.getSuperclass();
+                entityAnnotation = (Entity) processing.getAnnotation(Entity.class);
+                resultList.addAll(Arrays.asList(processing.getDeclaredFields()));
+                if (policy == Entity.InheritancePolicy.PARENT_ONLY_NO_ID || policy == Entity.InheritancePolicy.PARENT_ONLY_COMPOSITE_ID) {
+                    break;
+                }
+                if (policy == Entity.InheritancePolicy.SEQUENTIAL_NO_ID || policy == Entity.InheritancePolicy.SEQUENTIAL_COMPOSITE_ID) {
+                    policy = entityAnnotation.inheritColumns();
+                }
+            }
+
+            for (int i = 0; i < resultList.size(); i++) {
+                Field field = resultList.get(i);
+                if (field.getAnnotation(Column.class) == null) {
+                    resultList.remove(i--);
+                }
+            }
+            return resultList;
+        }
+
+        private static String buildColumnDefinition(Field field) {
+            Column columnAnnotation = field.getAnnotation(Column.class);
+            String columnName = columnAnnotation.value();
+            if (columnName.isEmpty()) {
+                columnName = field.getName();
+            }
+            String type = dispatchType(field, columnAnnotation.dataType());
+            StringBuilder builder = new StringBuilder(columnName.length() + type.length() + 1);
+            builder.append(columnName);
+            builder.append(' ');
+            builder.append(type);
+            return builder.toString();
+        }
+
+        private static String dispatchType(Field field, Column.DataType dataType) {
+            String textType = "TEXT";
+            String integerType = "INTEGER";
+            String realType = "REAL";
+            String blobType = "BLOB";
+
+            switch (dataType) {
+                case DATE_MILLIS:
+                case ENUM_ORDINAL:
+                    return integerType;
+                case DATE_TIMESTAMP:
+                case ENUM_STRING:
+                case JSON_STRING:
+                case TO_STRING_RESULT:
+                    return textType;
+                case BLOB:
+                case BLOB_STRING:
+                    return blobType;
+                default:
+                case AUTO:
+                    Class cls = field.getType();
+                    if (cls == Boolean.TYPE || cls == Boolean.class) {
+                        return textType;
+                    }
+                    if (cls.isPrimitive() || Number.class.isAssignableFrom(cls)) {
+                        if (cls == Float.TYPE || cls == Float.class ||
+                                cls == Double.TYPE || cls == Double.class) {
+                            return realType;
+                        }
+                        return integerType;
+                    }
+                    if (cls.isEnum()) {     //ENUM_STRING
+                        return textType;
+                    }
+                    return textType;
+            }
+        }
+    }
+
+    private static String buildPrimaryKeyScript(List<Field> columnFields) {
+        List<Field> idFields = new ArrayList<>();
+        boolean hasRowIdDefinition = false;
+        for (Field column : columnFields) {
+            Column columnAnnotation = column.getAnnotation(Column.class);
+            String name = columnAnnotation.value();
+            if (name.isEmpty()) {
+                name = column.getName();
+            }
+            if (name.equals(BaseColumns._ID) &&
+                    Number.class.isAssignableFrom(column.getType()) &&
+                    column.getType() != Float.class && column.getType() != Float.TYPE &&
+                    column.getType() != Double.class && column.getType() != Double.TYPE) {
+                hasRowIdDefinition = true;
+            }
+            if (column.getAnnotation(Id.class) != null) {
+                idFields.add(column);
+            }
+        }
+        StringBuilder builder = new StringBuilder();
+        if (!hasRowIdDefinition)  {
+            builder.append("_id INTEGER,");
+        }
+        builder.append("PRIMARY KEY(");
+        for (Field field : idFields) {
+            Column column = field.getAnnotation(Column.class);
+            String name = column.value();
+            if (name.isEmpty()) {
+                name = field.getName();
+            }
+            builder.append(name);
+            builder.append(',');
+        }
+        builder.setCharAt(builder.length() - 1, ')');
+        return builder.toString();
     }
 }

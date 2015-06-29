@@ -5,7 +5,7 @@ import android.app.Application;
 import android.os.Bundle;
 import android.util.Log;
 
-import com.alice.annonatations.AutoActivity;
+import com.alice.annonatations.ui.AutoActivity;
 import com.alice.exceptions.NotAnnotatedActivityUsedException;
 import com.alice.tools.Alice;
 

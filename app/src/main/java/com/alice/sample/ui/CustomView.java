@@ -5,8 +5,8 @@ import android.util.AttributeSet;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
-import com.alice.annonatations.AutoView;
-import com.alice.annonatations.InnerView;
+import com.alice.annonatations.ui.AutoView;
+import com.alice.annonatations.ui.InnerView;
 import com.alice.sample.R;
 
 /**

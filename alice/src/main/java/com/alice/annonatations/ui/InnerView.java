@@ -1,4 +1,4 @@
-package com.alice.annonatations;
+package com.alice.annonatations.ui;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

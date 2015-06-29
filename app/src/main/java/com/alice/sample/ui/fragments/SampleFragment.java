@@ -7,8 +7,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import com.alice.annonatations.AutoFragment;
-import com.alice.annonatations.InnerView;
+import com.alice.annonatations.ui.AutoFragment;
+import com.alice.annonatations.ui.InnerView;
 import com.alice.sample.R;
 import com.alice.sample.ui.CustomView;
 import com.alice.tools.Alice;

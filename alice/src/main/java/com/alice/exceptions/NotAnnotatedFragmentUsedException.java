@@ -1,6 +1,6 @@
 package com.alice.exceptions;
 
-import com.alice.annonatations.AutoFragment;
+import com.alice.annonatations.ui.AutoFragment;
 
 /**
  * Created by Sergey Nalivko.
@@ -9,6 +9,6 @@ import com.alice.annonatations.AutoFragment;
 public class NotAnnotatedFragmentUsedException extends RuntimeException {
 
     public NotAnnotatedFragmentUsedException() {
-        super("Target fragment should be annotated with %s and specify layout resource id" + AutoFragment.class );
+        super("Target fragment should be annotated with %s and specify layout resource id " + AutoFragment.class );
     }
 }
