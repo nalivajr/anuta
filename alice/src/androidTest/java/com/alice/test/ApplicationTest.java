@@ -15,7 +15,7 @@ public class ApplicationTest extends ApplicationTestCase<Application> {
     }
 
     public void testScriptCreation() {
-        String sql = Alice.DatabaseTools.generateCreateTableScript(Item.class);
+        String sql = Alice.DatabaseTools.generateRelationalTableScript(Item.class);
         System.out.println("[DB]" + sql);
     }
 }

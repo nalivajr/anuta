@@ -38,6 +38,16 @@ public @interface Entity {
      */
     InheritancePolicy inheritColumns() default InheritancePolicy.NO;
 
+    /**
+     * @return authority String to access provider, managing this entity
+     */
+    String authority();
+
+    /**
+     * @return Uri String, identifying this entity table
+     */
+    String uri();
+
     public static enum InheritancePolicy {
         /**
          * Do not inherit columns.

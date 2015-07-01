@@ -1,16 +1,17 @@
 package com.alice.components.database.models;
 
+import android.provider.BaseColumns;
+
 import com.alice.annonatations.db.Column;
 import com.alice.annonatations.db.Entity;
 import com.alice.annonatations.db.Id;
-import com.alice.components.database.Identifiable;
 
 /**
  * Created by Sergey Nalivko.
  * email: snalivko93@gmail.com
  */
-@Entity(name = "Item", tableName = "Item")
-public class Item implements Identifiable<String> {
+@Entity(name = "Item", tableName = "Item", authority = "authority")
+public class Item implements Persistable<String> {
 
     @Id
     @Column
@@ -23,5 +24,25 @@ public class Item implements Identifiable<String> {
     @Override
     public String getId() {
         return id;
+    }
+
+    @Override
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    @Override
+    public Integer getRowId() {
+        return _id;
+    }
+
+    @Override
+    public void setRowId(Integer id) {
+        this._id = id;
+    }
+
+    @Override
+    public String getIdColumnName() {
+        return BaseColumns._ID;
     }
 }

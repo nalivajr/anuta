@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.content.res.XmlResourceParser;
 import android.provider.BaseColumns;
+import android.support.annotation.NonNull;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,6 +19,7 @@ import com.alice.annonatations.ui.AutoActivity;
 import com.alice.annonatations.ui.AutoFragment;
 import com.alice.annonatations.ui.AutoView;
 import com.alice.annonatations.ui.InnerView;
+import com.alice.components.database.models.Identifiable;
 import com.alice.exceptions.NotAnnotatedActivityUsedException;
 import com.alice.exceptions.NotAnnotatedEntityException;
 import com.alice.exceptions.NotAnnotatedFragmentUsedException;
@@ -39,145 +41,153 @@ import java.util.Map;
  */
 public class Alice {
 
-    public static final String TAG = Alice.class.getSimpleName();
+    public static abstract class ViewTools {
 
-    /**
-     * Sets content view to activity. Finds and injects all views, annotated with {@link InnerView}
-     * @param activity the activity to setContent view
-     * @return the view, set as a content
-     * @throws NotAnnotatedActivityUsedException if activity is not annotated with {@link AutoActivity}
-     */
-    public static View setContentView(Activity activity) throws NotAnnotatedActivityUsedException {
-        AutoActivity annotation = activity.getClass().getAnnotation(AutoActivity.class);
-        if (annotation == null) {
-            throw new NotAnnotatedActivityUsedException();
+        public static final String TAG = String.format("%s.%s", Alice.class.getSimpleName(), ViewTools.class.getSimpleName());
+
+        /**
+         * Sets content view to activity. Finds and injects all views, annotated with {@link InnerView}
+         *
+         * @param activity the activity to setContent view
+         * @return the view, set as a content
+         * @throws NotAnnotatedActivityUsedException if activity is not annotated with {@link AutoActivity}
+         */
+        public static View setContentView(Activity activity) throws NotAnnotatedActivityUsedException {
+            AutoActivity annotation = activity.getClass().getAnnotation(AutoActivity.class);
+            if (annotation == null) {
+                throw new NotAnnotatedActivityUsedException();
+            }
+            int id = annotation.layoutId();
+            boolean recursive = annotation.recursive();
+            return setContentView(activity, id, recursive);
         }
-        int id = annotation.layoutId();
-        boolean recursive = annotation.recursive();
-        return setContentView(activity, id, recursive);
-    }
 
-    /**
-     * Creates layout for fragment. Finds and injects all views, annotated with {@link InnerView}
-     * @param fragment the fragment to create view
-     * @param context the context
-     * @return the view, set as a root view
-     */
-    public static View createView(Fragment fragment, Context context) {
-        AutoFragment annotation = fragment.getClass().getAnnotation(AutoFragment.class);
-        if (annotation == null) {
-            throw new NotAnnotatedFragmentUsedException();
+        /**
+         * Creates layout for fragment. Finds and injects all views, annotated with {@link InnerView}
+         *
+         * @param fragment the fragment to create view
+         * @param context  the context
+         * @return the view, set as a root view
+         */
+        public static View createView(Fragment fragment, Context context) {
+            AutoFragment annotation = fragment.getClass().getAnnotation(AutoFragment.class);
+            if (annotation == null) {
+                throw new NotAnnotatedFragmentUsedException();
+            }
+            int layoutId = annotation.layoutId();
+            boolean recursive = annotation.recursive();
+            return createView(context, fragment, layoutId, recursive);
         }
-        int layoutId = annotation.layoutId();
-        boolean recursive = annotation.recursive();
-        return createView(context, fragment, layoutId, recursive);
-    }
 
-    /**
-     * Creates layout for fragment. Finds and injects all views, annotated with {@link InnerView}
-     * @param fragment the fragment to create view
-     * @param context the context
-     * @return the view, set as a root view
-     */
-    public static View createView(Context context, Fragment fragment, int layoutId, boolean recursive) {
-        View view = LayoutInflater.from(context).inflate(layoutId, null);
+        /**
+         * Creates layout for fragment. Finds and injects all views, annotated with {@link InnerView}
+         *
+         * @param fragment the fragment to create view
+         * @param context  the context
+         * @return the view, set as a root view
+         */
+        public static View createView(Context context, Fragment fragment, int layoutId, boolean recursive) {
+            View view = LayoutInflater.from(context).inflate(layoutId, null);
 
-        Field[] fields = fragment.getClass().getDeclaredFields();
-        for (Field field : fields) {
-            InnerView innerViewAnnotation = field.getAnnotation(InnerView.class);
-            if (innerViewAnnotation != null) {
-                int id = innerViewAnnotation.value();
-                View v = view.findViewById(id);
-                field.setAccessible(true);
-                try {
-                    field.set(fragment, v);
-                } catch (IllegalAccessException e) {
-                    Log.w(TAG, "Could not initialize annotated field", e);
+            Field[] fields = fragment.getClass().getDeclaredFields();
+            for (Field field : fields) {
+                InnerView innerViewAnnotation = field.getAnnotation(InnerView.class);
+                if (innerViewAnnotation != null) {
+                    int id = innerViewAnnotation.value();
+                    View v = view.findViewById(id);
+                    field.setAccessible(true);
+                    try {
+                        field.set(fragment, v);
+                    } catch (IllegalAccessException e) {
+                        Log.w(TAG, "Could not initialize annotated field", e);
+                    }
+                    field.setAccessible(false);
                 }
-                field.setAccessible(false);
             }
+            initView(context, view, recursive);
+            return view;
         }
-        initView(context, view, recursive);
-        return view;
-    }
 
-    /**
-     * Sets content view to activity. Finds and injects all views, annotated with {@link InnerView}
-     * @param activity the activity to setContent view
-     * @param layoutId the id of layout resource
-     * @return the view, set as a content
-     */
-    public static View setContentView(Activity activity, int layoutId, boolean recursive) {
-        View root = activity.getLayoutInflater().inflate(layoutId, null);
-        activity.setContentView(root);
+        /**
+         * Sets content view to activity. Finds and injects all views, annotated with {@link InnerView}
+         *
+         * @param activity the activity to setContent view
+         * @param layoutId the id of layout resource
+         * @return the view, set as a content
+         */
+        public static View setContentView(Activity activity, int layoutId, boolean recursive) {
+            View root = activity.getLayoutInflater().inflate(layoutId, null);
+            activity.setContentView(root);
 
-        Field[] fields = activity.getClass().getDeclaredFields();
-        for (Field field : fields) {
-            InnerView innerViewAnnotation = field.getAnnotation(InnerView.class);
-            if (innerViewAnnotation != null) {
-                int id = innerViewAnnotation.value();
-                View v = root.findViewById(id);
-                field.setAccessible(true);
-                try {
-                    field.set(activity, v);
-                } catch (IllegalAccessException e) {
-                    Log.w(TAG, "Could not initialize annotated field", e);
+            Field[] fields = activity.getClass().getDeclaredFields();
+            for (Field field : fields) {
+                InnerView innerViewAnnotation = field.getAnnotation(InnerView.class);
+                if (innerViewAnnotation != null) {
+                    int id = innerViewAnnotation.value();
+                    View v = root.findViewById(id);
+                    field.setAccessible(true);
+                    try {
+                        field.set(activity, v);
+                    } catch (IllegalAccessException e) {
+                        Log.w(TAG, "Could not initialize annotated field", e);
+                    }
+                    field.setAccessible(false);
                 }
-                field.setAccessible(false);
             }
-        }
-        initView(activity, root, recursive);
-        return root;
-    }
-
-    /**
-     * Finds and injects all views, annotated with {@link InnerView}
-     * @param view target view
-     * @param recursive if true then all sub views in hierarchy will be initialized too
-     */
-    public static void initView(Context context, View view, boolean recursive) {
-        if (view == null) {
-            return;
+            initView(activity, root, recursive);
+            return root;
         }
 
-        if (ViewGroup.class.isAssignableFrom(view.getClass())) {
-            AutoView autoView = view.getClass().getAnnotation(AutoView.class);
-            ViewGroup v = (ViewGroup) view;
-            if (autoView != null) {
-                int layoutId = autoView.layoutId();
-                LayoutInflater.from(context).inflate(layoutId, v);
-                recursive = autoView.recursive();
+        /**
+         * Finds and injects all views, annotated with {@link InnerView}
+         *
+         * @param view      target view
+         * @param recursive if true then all sub views in hierarchy will be initialized too
+         */
+        public static void initView(Context context, View view, boolean recursive) {
+            if (view == null) {
+                return;
             }
 
-            for (int i = 0; i < v.getChildCount() && recursive; i++) {
-                View child = v.getChildAt(i);
-                initView(context, child, recursive);
-            }
-        }
-
-        Field[] fields = view.getClass().getDeclaredFields();
-        for (Field field : fields) {
-            InnerView innerViewAnnotation = field.getAnnotation(InnerView.class);
-            if (innerViewAnnotation != null) {
-                int id = innerViewAnnotation.value();
-                View v = view.findViewById(id);
-                field.setAccessible(true);
-                try {
-                    field.set(view, v);
-                } catch (IllegalAccessException e) {
-                    Log.w(TAG, "Could not initialize annotated field", e);
+            if (ViewGroup.class.isAssignableFrom(view.getClass())) {
+                AutoView autoView = view.getClass().getAnnotation(AutoView.class);
+                ViewGroup v = (ViewGroup) view;
+                if (autoView != null) {
+                    int layoutId = autoView.layoutId();
+                    LayoutInflater.from(context).inflate(layoutId, v);
+                    recursive = autoView.recursive();
                 }
-                field.setAccessible(false);
-            }
-            if (View.class.isAssignableFrom(field.getType()) && (field.getType().getAnnotation(AutoView.class) != null)) {
-                field.setAccessible(true);
-                try {
-                    View v = (View) field.get(view);
-                    initView(context, v, recursive);
-                } catch (IllegalAccessException e) {
-                    Log.w(TAG, "Could not get access", e);
+
+                for (int i = 0; i < v.getChildCount() && recursive; i++) {
+                    View child = v.getChildAt(i);
+                    initView(context, child, recursive);
                 }
-                field.setAccessible(false);
+            }
+
+            Field[] fields = view.getClass().getDeclaredFields();
+            for (Field field : fields) {
+                InnerView innerViewAnnotation = field.getAnnotation(InnerView.class);
+                if (innerViewAnnotation != null) {
+                    int id = innerViewAnnotation.value();
+                    View v = view.findViewById(id);
+                    field.setAccessible(true);
+                    try {
+                        field.set(view, v);
+                    } catch (IllegalAccessException e) {
+                        Log.w(TAG, "Could not initialize annotated field", e);
+                    }
+                    field.setAccessible(false);
+                }
+                if (View.class.isAssignableFrom(field.getType()) && (field.getType().getAnnotation(AutoView.class) != null)) {
+                    field.setAccessible(true);
+                    try {
+                        View v = (View) field.get(view);
+                        initView(context, v, recursive);
+                    } catch (IllegalAccessException e) {
+                        Log.w(TAG, "Could not get access", e);
+                    }
+                    field.setAccessible(false);
+                }
             }
         }
     }
@@ -254,15 +264,29 @@ public class Alice {
     public static abstract class DatabaseTools {
 
         /**
-         * Generates tables creation script for the given list of entity class
+         * Generates tables creation script for the given list of entity classes
          * @param entityClasses classes of entities
          * @return string, representing table creation script;
          * @throws NotAnnotatedEntityException if class is not annotated with {@link Entity}
          */
-        public static String generateCreateTableScript(List<Class> entityClasses) {
+        public static <T extends Identifiable> String generateRelationalTableScript(List<Class<T>> entityClasses) {
             StringBuilder builder = new StringBuilder();
             for (Class entityClass : entityClasses) {
-                builder.append(generateCreateTableScript(entityClass));
+                builder.append(generateRelationalTableScript(entityClass));
+            }
+            return builder.toString();
+        }
+
+        /**
+         * Generates NoSQL tables creation script for the given list of entity classes
+         * @param entityClasses classes of entities
+         * @return string, representing table creation script;
+         * @throws NotAnnotatedEntityException if class is not annotated with {@link Entity}
+         */
+        public static <T extends Identifiable> String generateNoSQLTableScript(List<Class<T>> entityClasses) {
+            StringBuilder builder = new StringBuilder();
+            for (Class entityClass : entityClasses) {
+                builder.append(generateNoSQLTableScript(entityClass));
             }
             return builder.toString();
         }
@@ -273,8 +297,8 @@ public class Alice {
          * @return string, representing table creation script;
          * @throws NotAnnotatedEntityException if class is not annotated with {@link Entity}
          */
-        public static String generateCreateTableScript(Class cls) {
-            Entity entityAnnotation = (Entity) cls.getAnnotation(Entity.class);
+        public static <T extends Identifiable> String generateRelationalTableScript(Class<T> cls) {
+            Entity entityAnnotation = cls.getAnnotation(Entity.class);
             if (entityAnnotation == null) {
                 throw new NotAnnotatedEntityException();
             }
@@ -300,7 +324,70 @@ public class Alice {
             return builder.toString();
         }
 
-        private static List<Field> extractFields(Entity entityAnnotation, Class cls) {
+        /**
+         * Generates NoSQL mode table creation script for the given entity class
+         * @param cls the class of entity
+         * @return string, representing table creation script;
+         * @throws NotAnnotatedEntityException if class is not annotated with {@link Entity}
+         */
+        public static <T extends Identifiable> String generateNoSQLTableScript(Class<T> cls) {
+            Entity entityAnnotation = cls.getAnnotation(Entity.class);
+            if (entityAnnotation == null) {
+                throw new NotAnnotatedEntityException();
+            }
+            String tableName = entityAnnotation.tableName();
+            if (tableName.isEmpty()) {
+                tableName = cls.getSimpleName();
+            }
+
+            StringBuilder builder = new StringBuilder();
+            builder.append(String.format("DROP TABLE %s;", tableName));
+            builder.append(String.format("CREATE TABLE %s (", tableName));
+            List<Field> columnFields = extractFields(entityAnnotation, cls);
+
+            for (Field field : columnFields) {
+                boolean index = false;
+                Id idAnno = field.getAnnotation(Id.class);
+                Column columnAnno = field.getAnnotation(Column.class);
+                index = idAnno != null || columnAnno.index();
+                if (!index) {
+                    continue;
+                }
+                String columnScript = buildColumnDefinition(field);
+                builder.append(columnScript);
+                builder.append(',');
+            }
+            // Appends definition of columns for entity name and JSON data
+            builder
+                    .append("entityName TEXT,")
+                    .append(buildJsonDataColumnName(cls)).append("TEXT,");
+
+            String primaryKeyScript = buildPrimaryKeyScript(columnFields);
+            builder.append(primaryKeyScript);
+            builder.append(')').append(';');
+            return builder.toString();
+        }
+
+        public static <T extends Identifiable> String buildJsonDataColumnName(Class<T> cls) {
+            return String.format("%s.%s", cls.getSimpleName(), "Data");
+        }
+
+        /**
+         * Extract all fields, which are annotated with {@link Column} and should be persisted
+         */
+        public static <T extends Identifiable> List<Field> extractFields(Entity entityAnnotation, Class<T> cls) {
+            return extractColumnsFields(entityAnnotation, cls, null);
+        }
+
+        /**
+         * Extract all fields, which are annotated with {@link Column} and {@link Column#index()} is set to true
+         */
+        public static <T extends Identifiable> List<Field> extractIndexedFields(Entity entityAnnotation, Class<T> cls) {
+            return extractColumnsFields(entityAnnotation, cls, true);
+        }
+
+        @NonNull
+        private static <T extends Identifiable> List<Field> extractColumnsFields(Entity entityAnnotation, Class<T> cls, Boolean indexed) {
             List<Field> resultList = new ArrayList<>();
             resultList.addAll(Arrays.asList(cls.getDeclaredFields()));
 
@@ -320,13 +407,17 @@ public class Alice {
 
             for (int i = 0; i < resultList.size(); i++) {
                 Field field = resultList.get(i);
-                if (field.getAnnotation(Column.class) == null) {
+                Column columnAnnotation = field.getAnnotation(Column.class);
+                if (columnAnnotation == null || (indexed != null && columnAnnotation.index() != indexed)) {
                     resultList.remove(i--);
                 }
             }
             return resultList;
         }
 
+        /**
+         * Generates script, which describes column in database
+         */
         private static String buildColumnDefinition(Field field) {
             Column columnAnnotation = field.getAnnotation(Column.class);
             String columnName = columnAnnotation.value();
@@ -338,6 +429,9 @@ public class Alice {
             builder.append(columnName);
             builder.append(' ');
             builder.append(type);
+            if (columnName.equals(BaseColumns._ID)) {
+                builder.append(" AUTO_INCREMENT");
+            }
             return builder.toString();
         }
 
@@ -401,7 +495,7 @@ public class Alice {
         }
         StringBuilder builder = new StringBuilder();
         if (!hasRowIdDefinition)  {
-            builder.append("_id INTEGER,");
+            builder.append("_id INTEGER AUTO_INCREMENT,");
         }
         builder.append("PRIMARY KEY(");
         for (Field field : idFields) {

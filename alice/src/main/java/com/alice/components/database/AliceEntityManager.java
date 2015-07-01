@@ -1,5 +1,7 @@
 package com.alice.components.database;
 
+import com.alice.components.database.models.Persistable;
+
 import java.util.List;
 
 /**
@@ -17,7 +19,7 @@ public interface AliceEntityManager {
      * @param <T> the type if target entity
      * @return Java object, representing the entity if object was found and null otherwise
      */
-    public <I, T extends Identifiable<I>> T find(Class<T> entityClass, I id);
+    public <I, T extends Persistable<I>> T find(Class<T> entityClass, I id);
 
     /**
      * Updates entity in database
@@ -26,14 +28,14 @@ public interface AliceEntityManager {
      *           neither instance of {@link Number} nor {@link java.lang.String}
      * @return updated entity
      */
-    public <I, T extends Identifiable<I>> T update(T entity);
+    public <I, T extends Persistable<I>> T update(T entity);
 
     /**
      * Finds all entities of the given type
      * @param <T> the type if target entity
      * @return list of found entities or empty list if nothing was found
      */
-    public <I, T extends Identifiable<I>> List<T> findAll(Class<T> entityClass);
+    public <I, T extends Persistable<I>> List<T> findAll(Class<T> entityClass);
 
     /**
      * Saves entity in database
@@ -43,7 +45,7 @@ public interface AliceEntityManager {
      *           neither instance of {@link Number} nor {@link java.lang.String}
      * @return saved entity
      */
-    public <I, T extends Identifiable<I>> T save(T entity);
+    public <I, T extends Persistable<I>> T save(T entity);
 
     /**
      * Deletes entity from database
@@ -53,7 +55,7 @@ public interface AliceEntityManager {
      *           neither instance of {@link Number} nor {@link java.lang.String}
      * @return true if was removed and false otherwise
      */
-    public <I, T extends Identifiable<I>> boolean delete(T entity);
+    public <I, T extends Persistable<I>> boolean delete(T entity);
 
     /**
      * Deletes entity from database
@@ -64,5 +66,5 @@ public interface AliceEntityManager {
      *           neither instance of {@link Number} nor {@link java.lang.String}
      * @return true if was removed and false otherwise
      */
-    public <I, T extends Identifiable<I>> boolean delete(Class<T> entityClass, I id);
+    public <I, T extends Persistable<I>> boolean delete(Class<T> entityClass, I id);
 }

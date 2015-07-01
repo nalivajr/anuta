@@ -1,11 +1,12 @@
-package com.alice.components.database;
+package com.alice.components.database.helpers;
 
 import android.content.Context;
 import android.database.DatabaseErrorHandler;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Log;
 
-import com.alice.tools.Alice;
+import com.alice.components.database.models.Identifiable;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -14,9 +15,11 @@ import java.util.List;
  * Created by Sergey Nalivko.
  * email: snalivko93@gmail.com
  */
-public class AliceDatabaseHelper extends SQLiteOpenHelper {
+public abstract class AliceDatabaseHelper extends SQLiteOpenHelper {
 
-    private List<Class> entityClasses = new LinkedList<Class>();
+    private static final String TAG = AliceDatabaseHelper.class.getSimpleName();
+
+    private List<Class<Identifiable>> entityClasses = new LinkedList<>();
 
     public AliceDatabaseHelper(Context context, String name, SQLiteDatabase.CursorFactory factory, int version) {
         super(context, name, factory, version);
@@ -26,6 +29,11 @@ public class AliceDatabaseHelper extends SQLiteOpenHelper {
         super(context, name, factory, version, errorHandler);
     }
 
+    /**
+     * Creates tables which are required to store data
+     */
+    protected abstract <T extends Identifiable> void createTablesForClasses(SQLiteDatabase db, List<Class<T>> classes);
+
     @Override
     public void onCreate(SQLiteDatabase db) {
         if (!entityClasses.isEmpty()) {
@@ -33,21 +41,10 @@ public class AliceDatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
-    @Override
-    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-
-    }
-
-    protected void createTablesForClasses(SQLiteDatabase db, List<Class> classes) {
-        String sql = Alice.DatabaseTools.generateCreateTableScript(classes);
-        db.beginTransaction();
-        db.execSQL(sql);
-        db.endTransaction();
-    }
-
-    public void setEntityClasses(List<Class> classes) {
+    public void setEntityClasses(List<Class<Identifiable>> classes) {
         entityClasses.clear();
         if (classes != null) {
+            Log.i(TAG, "Applying entity classes " + classes.toString());
             entityClasses.addAll(classes);
         }
     }

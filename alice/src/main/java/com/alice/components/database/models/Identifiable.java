@@ -1,4 +1,4 @@
-package com.alice.components.database;
+package com.alice.components.database.models;
 
 /**
  * Created by Sergey Nalivko.
@@ -15,5 +15,10 @@ public interface Identifiable<I> {
      * @return the id of object
      */
     public I getId();
+
+    /**
+     * Sets the id to object
+     */
+    public void setId(I id);
 
 }
