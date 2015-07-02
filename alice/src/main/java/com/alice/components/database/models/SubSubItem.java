@@ -10,19 +10,19 @@ import com.alice.annonatations.db.Id;
  * Created by Sergey Nalivko.
  * email: snalivko93@gmail.com
  */
-@Entity(name = "Item", tableName = "Item", authority = "authority", tableUri = "")
-public class Item implements Persistable<String> {
+@Entity(name = "SubSubItem", tableName = "SubSubItem", authority = "authority", tableUri = "", inheritColumns = Entity.InheritancePolicy.HIERARCHY_COMPOSITE_ID)
+public class SubSubItem extends SubItem {
 
     @Id
     @Column("_id")
     private Long rowId;
 
     @Id
-    @Column
+    @Column("subSubItemId")
     private String id;
 
     @Column
-    private String itemData;
+    private String subSubItemData;
 
     @Override
     public String getId() {
@@ -47,5 +47,13 @@ public class Item implements Persistable<String> {
     @Override
     public String getIdColumnName() {
         return BaseColumns._ID;
+    }
+
+    public String getSubSubItemData() {
+        return subSubItemData;
+    }
+
+    public void setSubSubItemData(String subSubItemData) {
+        this.subSubItemData = subSubItemData;
     }
 }

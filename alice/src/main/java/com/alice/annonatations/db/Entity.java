@@ -46,7 +46,7 @@ public @interface Entity {
     /**
      * @return Uri String, identifying this entity table
      */
-    String uri();
+    String tableUri();
 
     public static enum InheritancePolicy {
         /**

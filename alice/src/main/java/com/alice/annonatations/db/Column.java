@@ -59,10 +59,9 @@ public @interface Column {
         JSON_STRING,
 
         /**
-         * Used to store data as string. The result of invocation of {@link Object#toString()} will be used.
-         * For example can be used to store numbers as strings.
+         * Used to store data as byte array of serialized object. Property type should implement {@link java.io.Serializable}
          */
-        TO_STRING_RESULT,
+        SERIALIZABLE,
 
         /**
          * Used to store data as blob.
@@ -88,7 +87,7 @@ public @interface Column {
          *     If field type is {@link String} that it will be stored as TEXT
          * </li>
          * <li>
-         *     If field type is other object type that it will be stored as TEXT using TO_STRING strategy
+         *     If field type is other object type that it will be stored as BLOB using serialization strategy
          * </li>
          * <li>
          *     If field type is byte array type that it will be stored as BLOB

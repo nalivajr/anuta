@@ -2,6 +2,7 @@ package com.alice.tools;
 
 import android.app.Activity;
 import android.app.Fragment;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.res.Resources;
 import android.content.res.XmlResourceParser;
@@ -20,20 +21,38 @@ import com.alice.annonatations.ui.AutoFragment;
 import com.alice.annonatations.ui.AutoView;
 import com.alice.annonatations.ui.InnerView;
 import com.alice.components.database.models.Identifiable;
+import com.alice.components.database.models.Persistable;
+import com.alice.exceptions.ConversionException;
+import com.alice.exceptions.IncorrectMapingException;
+import com.alice.exceptions.InvalidDataTypeException;
 import com.alice.exceptions.NotAnnotatedActivityUsedException;
 import com.alice.exceptions.NotAnnotatedEntityException;
+import com.alice.exceptions.NotAnnotatedFieldException;
 import com.alice.exceptions.NotAnnotatedFragmentUsedException;
+import com.alice.exceptions.ObjectDeserializationException;
+import com.alice.exceptions.ObjectSerializationException;
+import com.google.gson.Gson;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.lang.reflect.Field;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by Sergey Nalivko.
@@ -263,6 +282,10 @@ public class Alice {
 
     public static abstract class DatabaseTools {
 
+        public static final String ENTITY_NAME_COLUMN = "entityName";
+
+        private static final String TAG = String.format("%s.%s", Alice.class.getSimpleName(), DatabaseTools.class.getSimpleName());
+        private static final Gson gson = new Gson();
         /**
          * Generates tables creation script for the given list of entity classes
          * @param entityClasses classes of entities
@@ -310,7 +333,8 @@ public class Alice {
             StringBuilder builder = new StringBuilder();
             builder.append(String.format("DROP TABLE %s;", tableName));
             builder.append(String.format("CREATE TABLE %s (", tableName));
-            List<Field> columnFields = extractFields(entityAnnotation, cls);
+            List<Field> columnFields = extractFields(cls);
+            validateFields(columnFields);
 
             for (Field field : columnFields) {
                 String columnScript = buildColumnDefinition(field);
@@ -343,7 +367,8 @@ public class Alice {
             StringBuilder builder = new StringBuilder();
             builder.append(String.format("DROP TABLE %s;", tableName));
             builder.append(String.format("CREATE TABLE %s (", tableName));
-            List<Field> columnFields = extractFields(entityAnnotation, cls);
+            List<Field> columnFields = extractFields(cls);
+            validateFields(columnFields);
 
             for (Field field : columnFields) {
                 boolean index = false;
@@ -359,8 +384,8 @@ public class Alice {
             }
             // Appends definition of columns for entity name and JSON data
             builder
-                    .append("entityName TEXT,")
-                    .append(buildJsonDataColumnName(cls)).append("TEXT,");
+                    .append(ENTITY_NAME_COLUMN + " TEXT,")
+                    .append(buildJsonDataColumnName(cls)).append(" TEXT,");
 
             String primaryKeyScript = buildPrimaryKeyScript(columnFields);
             builder.append(primaryKeyScript);
@@ -368,26 +393,42 @@ public class Alice {
             return builder.toString();
         }
 
+        private static void validateFields(List<Field> columnFields) {
+            Set<String> columnNames = new HashSet<>();
+            for(Field field : columnFields) {
+                Column columnAnno = field.getAnnotation(Column.class);
+                if (columnAnno == null) {
+                    continue;
+                }
+                String name = columnAnno.value();
+                if (name.isEmpty()) {
+                    name = field.getName();
+                }
+                if (columnNames.contains(name)) {
+                    throw new IncorrectMapingException(String.format("Column names are not unique. Please check whether all columns have different name including parent objects columns if inheritance mode is enabled. Property: %s in class %s", field.getName(), field.getDeclaringClass().getName()));
+                }
+                columnNames.add(name);
+            }
+        }
+
         public static <T extends Identifiable> String buildJsonDataColumnName(Class<T> cls) {
-            return String.format("%s.%s", cls.getSimpleName(), "Data");
+            return cls.getSimpleName() + "JsonData";
         }
 
         /**
          * Extract all fields, which are annotated with {@link Column} and should be persisted
          */
-        public static <T extends Identifiable> List<Field> extractFields(Entity entityAnnotation, Class<T> cls) {
-            return extractColumnsFields(entityAnnotation, cls, null);
-        }
-
-        /**
-         * Extract all fields, which are annotated with {@link Column} and {@link Column#index()} is set to true
-         */
-        public static <T extends Identifiable> List<Field> extractIndexedFields(Entity entityAnnotation, Class<T> cls) {
-            return extractColumnsFields(entityAnnotation, cls, true);
+        public static <T extends Identifiable> List<Field> extractFields(Class<T> cls) {
+            return extractColumnsFields(cls, null);
         }
 
         @NonNull
-        private static <T extends Identifiable> List<Field> extractColumnsFields(Entity entityAnnotation, Class<T> cls, Boolean indexed) {
+        private static <T extends Identifiable> List<Field> extractColumnsFields(Class<T> cls, Boolean indexed) {
+            Entity entityAnnotation = cls.getAnnotation(Entity.class);
+            if (entityAnnotation == null) {
+                throw new NotAnnotatedEntityException();
+            }
+
             List<Field> resultList = new ArrayList<>();
             resultList.addAll(Arrays.asList(cls.getDeclaredFields()));
 
@@ -410,9 +451,55 @@ public class Alice {
                 Column columnAnnotation = field.getAnnotation(Column.class);
                 if (columnAnnotation == null || (indexed != null && columnAnnotation.index() != indexed)) {
                     resultList.remove(i--);
+                    continue;
+                }
+                String name = columnAnnotation.value();
+                if (name.isEmpty()) {
+                    name = field.getName();
+                }
+                if (name.equals(BaseColumns._ID) && field.getDeclaringClass() != cls) {
+                    resultList.remove(i--);
+                    continue;
+                }
+                Id idColumn = field.getAnnotation(Id.class);
+                if (idColumn != null && !isIdShouldBeInherited(cls, field)) {
+                    resultList.remove(i--);
                 }
             }
             return resultList;
+        }
+
+        private static <T extends Identifiable> boolean isIdShouldBeInherited(Class<T> cls, Field field) {
+            Entity.InheritancePolicy targetEntityPolicy = cls.getAnnotation(Entity.class).inheritColumns();
+            switch (targetEntityPolicy) {
+                case NO:
+                    return false;
+                case HIERARCHY_COMPOSITE_ID:
+                    return true;
+                case HIERARCHY_NO_ID:
+                case PARENT_ONLY_NO_ID:
+                    return field.getDeclaringClass() == cls;
+                case PARENT_ONLY_COMPOSITE_ID:
+                    return cls.getSuperclass() == field.getDeclaringClass() || field.getDeclaringClass() == cls;
+            }
+
+            Class fieldClass = field.getDeclaringClass();
+            if (fieldClass == cls) {
+                return true;
+            }
+            Class<?> child = cls;
+            while (child.getSuperclass() != fieldClass) {
+                child = child.getSuperclass();
+            }
+            Entity.InheritancePolicy policy = child.getAnnotation(Entity.class).inheritColumns();
+            switch (policy) {
+                case HIERARCHY_COMPOSITE_ID:
+                case PARENT_ONLY_COMPOSITE_ID:
+                case SEQUENTIAL_COMPOSITE_ID:
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         /**
@@ -435,6 +522,43 @@ public class Alice {
             return builder.toString();
         }
 
+        private static String buildPrimaryKeyScript(List<Field> columnFields) {
+            List<Field> idFields = new ArrayList<>();
+            boolean hasRowIdDefinition = false;
+            for (Field column : columnFields) {
+                Column columnAnnotation = column.getAnnotation(Column.class);
+                String name = columnAnnotation.value();
+                if (name.isEmpty()) {
+                    name = column.getName();
+                }
+                if (name.equals(BaseColumns._ID) &&
+                        Number.class.isAssignableFrom(column.getType()) &&
+                        column.getType() != Float.class && column.getType() != Float.TYPE &&
+                        column.getType() != Double.class && column.getType() != Double.TYPE) {
+                    hasRowIdDefinition = true;
+                }
+                if (column.getAnnotation(Id.class) != null) {
+                    idFields.add(column);
+                }
+            }
+            StringBuilder builder = new StringBuilder();
+            if (!hasRowIdDefinition)  {
+                builder.append("_id INTEGER AUTO_INCREMENT,");
+            }
+            builder.append("PRIMARY KEY(");
+            for (Field field : idFields) {
+                Column column = field.getAnnotation(Column.class);
+                String name = column.value();
+                if (name.isEmpty()) {
+                    name = field.getName();
+                }
+                builder.append(name);
+                builder.append(',');
+            }
+            builder.setCharAt(builder.length() - 1, ')');
+            return builder.toString();
+        }
+
         private static String dispatchType(Field field, Column.DataType dataType) {
             String textType = "TEXT";
             String integerType = "INTEGER";
@@ -448,8 +572,8 @@ public class Alice {
                 case DATE_TIMESTAMP:
                 case ENUM_STRING:
                 case JSON_STRING:
-                case TO_STRING_RESULT:
                     return textType;
+                case SERIALIZABLE:
                 case BLOB:
                 case BLOB_STRING:
                     return blobType;
@@ -469,45 +593,212 @@ public class Alice {
                     if (cls.isEnum()) {     //ENUM_STRING
                         return textType;
                     }
-                    return textType;
+                    if (String.class.isAssignableFrom(cls)) {
+                        return textType;
+                    }
+                    return blobType;
             }
         }
-    }
 
-    private static String buildPrimaryKeyScript(List<Field> columnFields) {
-        List<Field> idFields = new ArrayList<>();
-        boolean hasRowIdDefinition = false;
-        for (Field column : columnFields) {
-            Column columnAnnotation = column.getAnnotation(Column.class);
-            String name = columnAnnotation.value();
-            if (name.isEmpty()) {
-                name = column.getName();
+        /**
+         * Extracts fields values and adopts them according to {@link com.alice.annonatations.db.Column.DataType} for this field
+         * @param field value source field
+         * @param entity source entity
+         * @return converted value, corresponding to {@link com.alice.annonatations.db.Column.DataType}
+         */
+        public static <I, T extends Persistable<I>> Object getFieldValue(Field field, T entity) {
+            Column annotation = field.getAnnotation(Column.class);
+            if (annotation == null) {
+                throw new NotAnnotatedFieldException(field);
             }
-            if (name.equals(BaseColumns._ID) &&
-                    Number.class.isAssignableFrom(column.getType()) &&
-                    column.getType() != Float.class && column.getType() != Float.TYPE &&
-                    column.getType() != Double.class && column.getType() != Double.TYPE) {
-                hasRowIdDefinition = true;
+            Column.DataType dataType = annotation.dataType();
+
+            Object val = null;
+            field.setAccessible(true);
+            try {
+                val = field.get(entity);
+            } catch (Throwable e) {
+                Log.e(TAG, "Could not get value", e);
+                return null;
+            } finally {
+                field.setAccessible(false);
             }
-            if (column.getAnnotation(Id.class) != null) {
-                idFields.add(column);
+            if (val == null) {
+                return null;
+            }
+
+            switch (dataType) {
+                case DATE_MILLIS:
+                    return ((Date) val).getTime();
+                case ENUM_ORDINAL:
+                    return ((Enum) val).ordinal();
+                case DATE_TIMESTAMP:
+                    return SimpleDateFormat.getDateTimeInstance().format(val);
+                case ENUM_STRING:
+                    return ((Enum) val).name();
+                case JSON_STRING:
+                    return gson.toJson(val);
+                case SERIALIZABLE:
+                    return toByteArray(dataType, field, val);
+                case BLOB_STRING:
+                    return ((String)val).getBytes();
+                case BLOB:
+                    if (val instanceof byte[]) {
+                        return val;
+                    }
+                default:
+                case AUTO:
+                    Class cls = field.getType();
+                    if (cls == Boolean.TYPE || cls == Boolean.class) {
+                        return String.valueOf(val);
+                    }
+                    if (cls.isPrimitive() || Number.class.isAssignableFrom(cls)) {
+                        if (cls == Character.TYPE || cls == Character.class) {
+                            return (int) (Character) val;
+                        }
+                        return val;
+                    }
+                    if (cls.isEnum()) {     //ENUM_STRING
+                        return ((Enum)val).name();
+                    }
+                    if (val instanceof String) {
+                        return val;
+                    }
+                    if (val instanceof Serializable) {
+                        return toByteArray(Column.DataType.SERIALIZABLE, field, val);
+                    }
+                    return val.toString();
             }
         }
-        StringBuilder builder = new StringBuilder();
-        if (!hasRowIdDefinition)  {
-            builder.append("_id INTEGER AUTO_INCREMENT,");
-        }
-        builder.append("PRIMARY KEY(");
-        for (Field field : idFields) {
-            Column column = field.getAnnotation(Column.class);
-            String name = column.value();
-            if (name.isEmpty()) {
-                name = field.getName();
+
+        /**
+         * Converts value from data type to entity's property value
+         * @param field target field
+         * @param dataType type for storing in DB
+         * @param val the value to be converted
+         * @return converted value
+         */
+        public static Object convert(Field field, Column.DataType dataType, Object val) {
+
+            if (val == null) {
+                return null;
             }
-            builder.append(name);
-            builder.append(',');
+
+            switch (dataType) {
+                case DATE_MILLIS:
+                    return new Date((Long) val);
+                case ENUM_ORDINAL:
+                    int index = ((Number) val).intValue();
+                    return (field.getType().getEnumConstants())[index];
+                case DATE_TIMESTAMP:
+                    try {
+                        return SimpleDateFormat.getDateTimeInstance().parse((String) val);
+                    } catch (ParseException e) {
+                        Log.e(TAG, "Could not parse timestamp to date", e);
+                    }
+                case ENUM_STRING:
+                    Class<?> type = field.getType();
+                    if (!type.isEnum()) {
+                        throw new InvalidDataTypeException(dataType, field);
+                    }
+                    Enum[] enumConstants = (Enum[]) type.getEnumConstants();
+                    String name = (String) val;
+                    for (Enum e : enumConstants) {
+                        if (e.name().equals(name)) {
+                            return e;
+                        }
+                    }
+                    throw new ConversionException(val, type);
+                case JSON_STRING:
+                    return gson.fromJson((String)val, field.getType());
+                case SERIALIZABLE:
+                    return readObject(dataType, field, (byte[])val);
+                case BLOB_STRING:
+                    return new String((byte[])val);
+                case BLOB:
+                    if (val instanceof byte[]) {
+                        return val;
+                    }
+                default:
+                case AUTO:
+                    Class cls = field.getType();
+                    if (cls == Boolean.TYPE || cls == Boolean.class) {
+                        return Boolean.parseBoolean((String) val);
+                    }
+                    if (cls.isPrimitive() || Number.class.isAssignableFrom(cls) || Character.class.isAssignableFrom(cls)) {
+                        if (cls == Character.class || cls == Character.TYPE) {
+                            return (char) val;
+                        }
+                        return cls.cast(val);
+                    }
+                    if (cls.isEnum()) {     //ENUM_STRING
+                        return ((Enum)val).name();
+                    }
+                    if (val instanceof String) {
+                        return val;
+                    }
+                    if (val instanceof byte[]) {
+                        readObject(dataType, field, (byte[])val);
+                    }
+                    return readObject(Column.DataType.SERIALIZABLE, field, (byte[]) val);
+            }
         }
-        builder.setCharAt(builder.length() - 1, ')');
-        return builder.toString();
+
+        /**
+         * Puts value according to its type to {@link ContentValues} object
+         * @param contentValues destination
+         * @param key value key
+         * @param val the value to be put
+         */
+        public static void putValue(ContentValues contentValues, String key, Object val) {
+            if (val == null) {
+                contentValues.putNull(key);
+            } else if (val instanceof Boolean) {
+                contentValues.put(key, (Boolean)val);
+            } else if (val instanceof String) {
+                contentValues.put(key, (String)val);
+            } else if (val instanceof byte[]) {
+                contentValues.put(key, (byte)val);
+            } else if (val instanceof Byte) {
+                contentValues.put(key, (Byte)val);
+            } else if (val instanceof Short) {
+                contentValues.put(key,((Short)val));
+            } else if (val instanceof Integer) {
+                contentValues.put(key, (Integer)val);
+            } else if (val instanceof Long) {
+                contentValues.put(key, (Long)val);
+            } else if (val instanceof Float) {
+                contentValues.put(key, (Float)val);
+            } else if (val instanceof Double) {
+                contentValues.put(key, (Double)val);
+            }
+        }
+
+        private static byte[] toByteArray(Column.DataType dataType, Field field, Object val) {
+            if (!(val instanceof Serializable)) {
+                throw new InvalidDataTypeException(dataType, field);
+            }
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ObjectOutputStream objectOutputStream = null;
+            try {
+                objectOutputStream = new ObjectOutputStream(baos);
+                objectOutputStream.writeObject(val);
+                return baos.toByteArray();
+            } catch (IOException e) {
+                e.printStackTrace();
+                throw new ObjectSerializationException(dataType, field);
+            }
+        }
+
+        private static Object readObject(Column.DataType dataType, Field field, byte[] bytes) {
+            ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(bytes);
+            ObjectInputStream objectInputStream = null;
+            try {
+                objectInputStream = new ObjectInputStream(byteArrayInputStream);
+                return objectInputStream.readObject();
+            } catch (IOException | ClassNotFoundException e) {
+                throw new ObjectDeserializationException(dataType, field);
+            }
+        }
     }
 }

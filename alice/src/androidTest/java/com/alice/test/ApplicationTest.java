@@ -3,7 +3,7 @@ package com.alice.test;
 import android.app.Application;
 import android.test.ApplicationTestCase;
 
-import com.alice.components.database.models.Item;
+import com.alice.components.database.models.SubSubItem;
 import com.alice.tools.Alice;
 
 /**
@@ -15,7 +15,7 @@ public class ApplicationTest extends ApplicationTestCase<Application> {
     }
 
     public void testScriptCreation() {
-        String sql = Alice.DatabaseTools.generateRelationalTableScript(Item.class);
+        String sql = Alice.DatabaseTools.generateNoSQLTableScript(SubSubItem.class);
         System.out.println("[DB]" + sql);
     }
 }
