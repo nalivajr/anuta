@@ -1,4 +1,4 @@
-package com.alice.annonatations.db;
+package com.alice.annonatations.database;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -87,10 +87,7 @@ public @interface Column {
          *     If field type is {@link String} that it will be stored as TEXT
          * </li>
          * <li>
-         *     If field type is other object type that it will be stored as BLOB using serialization strategy
-         * </li>
-         * <li>
-         *     If field type is byte array type that it will be stored as BLOB
+         *     If field type is other object type that it will be stored as TEXT using JSON_STRING strategy
          * </li>
          * </ul>
          */

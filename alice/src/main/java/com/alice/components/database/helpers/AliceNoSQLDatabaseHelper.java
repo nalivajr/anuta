@@ -3,7 +3,6 @@ package com.alice.components.database.helpers;
 import android.content.Context;
 import android.database.DatabaseErrorHandler;
 import android.database.sqlite.SQLiteDatabase;
-import android.util.Log;
 
 import com.alice.components.database.models.Identifiable;
 import com.alice.tools.Alice;
@@ -26,16 +25,8 @@ public abstract class AliceNoSQLDatabaseHelper extends AliceDatabaseHelper {
         super(context, name, factory, version, errorHandler);
     }
 
-    protected <T extends Identifiable> void createTablesForClasses(SQLiteDatabase db, List<Class<T>> classes) {
-        String sql = Alice.DatabaseTools.generateNoSQLTableScript(classes);
-        try {
-            db.beginTransaction();
-            db.execSQL(sql);
-            db.setTransactionSuccessful();
-        } catch (Throwable e) {
-            Log.e(TAG, "Could not create tables", e);
-        } finally {
-            db.endTransaction();
-        }
+    @Override
+    protected <T extends Identifiable> String getTableCreationScript(List<Class<T>> classes) {
+        return Alice.databaseTools.generateNoSQLTableScript(classes);
     }
 }

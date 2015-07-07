@@ -13,9 +13,9 @@ public interface Persistable<I> extends Identifiable<I> {
 
     /**
      * Sets _id for entity
-     * @param id the _id value
+     * @param rowId the _id value
      */
-    public void setRowId(Long id);
+    public void setRowId(Long rowId);
 
     /**
      * Provides the name of identifier column. It can be either {@value android.provider.BaseColumns#_ID} or

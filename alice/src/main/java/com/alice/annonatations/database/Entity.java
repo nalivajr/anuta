@@ -1,4 +1,4 @@
-package com.alice.annonatations.db;
+package com.alice.annonatations.database;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -43,11 +43,6 @@ public @interface Entity {
      */
     String authority();
 
-    /**
-     * @return Uri String, identifying this entity table
-     */
-    String tableUri();
-
     public static enum InheritancePolicy {
         /**
          * Do not inherit columns.
@@ -57,33 +52,17 @@ public @interface Entity {
         /**
          * Inherits only first level parent columns but do not inherits parent's id
          */
-        PARENT_ONLY_NO_ID,
+        PARENT_ONLY,
 
         /**
          * Inherits columns from whole hierarchy of entity, but do not inherits parent's ids
          */
-        HIERARCHY_NO_ID,
+        HIERARCHY,
 
         /**
-         * Inherits columns from parent class, but do not inherits parent's id. If Parent has not {@link Entity#inheritColumns()}
-         * value set to false, then columns inheritance will continue with parent's policy. Parent id won't be used as id for target entity
+         * Inherits columns from parent class, but do not inherits parent's id. If Parent has {@link Entity#inheritColumns()}
+         * value set then columns inheritance will continue with parent's policy. Parent id won't be used as id for target entity
          */
         SEQUENTIAL_NO_ID,
-
-        /**
-         * Inherits only first level parent columns. Parent's ids will be used to build composite primary key
-         */
-        PARENT_ONLY_COMPOSITE_ID,
-
-        /**
-         * Inherits columns from whole hierarchy of entity. Parent's ids will be used to build composite primary key
-         */
-        HIERARCHY_COMPOSITE_ID,
-
-        /**
-         * Inherits columns from parent class, but do not inherits parent's id. If Parent has not {@link Entity#inheritColumns()}
-         * value set to false, then columns inheritance will continue with parent's policy. Parent id will be used to build composite primary key
-         */
-        SEQUENTIAL_COMPOSITE_ID
     }
 }

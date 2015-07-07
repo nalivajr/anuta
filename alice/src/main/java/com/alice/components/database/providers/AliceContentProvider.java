@@ -10,7 +10,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.util.Log;
 
-import com.alice.annonatations.db.Entity;
+import com.alice.annonatations.database.Entity;
 import com.alice.components.database.helpers.AliceDatabaseHelper;
 import com.alice.components.database.models.Identifiable;
 import com.alice.exceptions.NotAnnotatedEntityException;
@@ -46,7 +46,7 @@ public abstract class AliceContentProvider extends ContentProvider {
      * Provides list of classes which is managed by this provider
      * @return list of classes which is managed by this provider
      */
-    public abstract <T extends Identifiable> List<Class<T>> getEntityClasses();
+    public abstract <T> List<Class<T>> getEntityClasses();
 
     protected abstract AliceDatabaseHelper createDatabaseHelper();
 
@@ -86,6 +86,9 @@ public abstract class AliceContentProvider extends ContentProvider {
             throw e;
         } finally {
             database.endTransaction();
+        }
+        if (rowId == -1) {
+            throw new RuntimeException("Could not save to database. Incorrect data.");
         }
 
         Uri newUri = new Uri.Builder()
@@ -143,7 +146,7 @@ public abstract class AliceContentProvider extends ContentProvider {
         return updated;
     }
 
-    protected <T extends Identifiable> void populateMap(List<Class<T>> entityClasses) {
+    protected <T> void populateMap(List<Class<T>> entityClasses) {
 
         int start = 10001;
         int step = 10000;
@@ -155,7 +158,7 @@ public abstract class AliceContentProvider extends ContentProvider {
         for (Class<T> cls : entityClasses) {
             Entity annotation = cls.getAnnotation(Entity.class);
             if (annotation == null) {
-                throw new NotAnnotatedEntityException();
+                throw new NotAnnotatedEntityException(cls);
             }
             String tableName = annotation.tableName();
             if (tableName.isEmpty()) {

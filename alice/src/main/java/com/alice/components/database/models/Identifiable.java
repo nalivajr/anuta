@@ -15,10 +15,4 @@ public interface Identifiable<I> {
      * @return the id of object
      */
     public I getId();
-
-    /**
-     * Sets the id to object
-     */
-    public void setId(I id);
-
 }

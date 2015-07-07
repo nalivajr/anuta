@@ -1,6 +1,6 @@
 package com.alice.exceptions;
 
-import com.alice.annonatations.db.Column;
+import com.alice.annonatations.database.Column;
 
 import java.lang.reflect.Field;
 

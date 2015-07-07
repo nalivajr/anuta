@@ -1,16 +1,17 @@
-package com.alice.components.database.models;
+package com.alice.sample.database.models;
 
 import android.provider.BaseColumns;
 
-import com.alice.annonatations.db.Column;
-import com.alice.annonatations.db.Entity;
-import com.alice.annonatations.db.Id;
+import com.alice.annonatations.database.Column;
+import com.alice.annonatations.database.Entity;
+import com.alice.annonatations.database.Id;
+import com.alice.components.database.models.Persistable;
 
 /**
  * Created by Sergey Nalivko.
  * email: snalivko93@gmail.com
  */
-@Entity(name = "Item", tableName = "Item", authority = "authority", tableUri = "")
+@Entity(name = "Item", tableName = "Item", authority = "authority")
 public class Item implements Persistable<String> {
 
     @Id
@@ -22,14 +23,13 @@ public class Item implements Persistable<String> {
     private String id;
 
     @Column
-    private String itemData;
+    private String itemData  = "item-data";
 
     @Override
     public String getId() {
         return id;
     }
 
-    @Override
     public void setId(String id) {
         this.id = id;
     }

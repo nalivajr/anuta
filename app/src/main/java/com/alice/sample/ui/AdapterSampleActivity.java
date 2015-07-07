@@ -32,7 +32,7 @@ public class AdapterSampleActivity extends Activity {
 
         List<Person> personList = createTestDataList();
 
-        Map<Integer, List<Integer>> subViewIds = Alice.AdapterTools.buildIdsMap(this, R.layout.alice_adapter_item_left, R.layout.alice_adapter_item_right);
+        Map<Integer, List<Integer>> subViewIds = Alice.adapterTools.buildIdsMap(this, R.layout.alice_adapter_item_left, R.layout.alice_adapter_item_right);
         listView.setAdapter(new SampleAliceAdapter(this, personList, subViewIds));
     }
 
