@@ -1,7 +1,5 @@
 package com.alice.components.database;
 
-import com.alice.components.database.models.Persistable;
-
 import java.util.List;
 
 /**
@@ -22,8 +20,6 @@ public interface AliceEntityManager {
     /**
      * Updates entity in database
      * @param <T> the type if target entity
-     * @param <I> the type of entity identifier. Be aware that id is converted to JSON string if {@code I}
-     *           neither instance of {@link Number} nor {@link java.lang.String}
      * @return updated entity
      */
     public <T> T update(T entity);
@@ -56,8 +52,6 @@ public interface AliceEntityManager {
      * @param entityClass the class of entity to be deleted
      * @param id the id of entity to be removed
      * @param <T> the type if target entity
-     * @param <I> the type of entity identifier. Be aware that id is converted to JSON string if {@code I}
-     *           neither instance of {@link Number} nor {@link java.lang.String}
      * @return true if was removed and false otherwise
      */
     public <T> boolean delete(Class<T> entityClass, String id);

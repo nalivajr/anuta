@@ -7,11 +7,15 @@ import android.util.Log;
 import com.alice.annonatations.database.Column;
 import com.alice.annonatations.database.Entity;
 import com.alice.annonatations.database.Id;
+import com.alice.components.database.models.ColumnDescriptor;
+import com.alice.components.database.models.EntityDescriptor;
 import com.alice.components.database.models.Identifiable;
 import com.alice.components.database.models.Persistable;
+import com.alice.components.database.models.SqliteDataType;
 import com.alice.exceptions.IncorrectMappingException;
 import com.alice.exceptions.InvalidDataTypeException;
 import com.alice.exceptions.InvalidEntityIdMappingException;
+import com.alice.exceptions.InvalidRowIdMappingException;
 import com.alice.exceptions.NotAnnotatedEntityException;
 import com.alice.exceptions.NotAnnotatedFieldException;
 import com.google.gson.Gson;
@@ -31,13 +35,8 @@ import java.util.Set;
  * Created by Sergey Nalivko.
  * email: snalivko93@gmail.com
  */
-public class DatabaseTools {
+public final class DatabaseTools {
     public static final String ENTITY_NAME_COLUMN = "entityName";
-
-    public static final String SQLITE_TYPE_TEXT = "TEXT";
-    public static final String SQLITE_TYPE_INTEGER = "INTEGER";
-    public static final String SQLITE_TYPE_REAL = "REAL";
-    public static final String SQLITE_TYPE_BLOB = "BLOB";
 
     private static final String EMPTY_COLUMN_MANE = "";
 
@@ -156,7 +155,7 @@ public class DatabaseTools {
         }
         // Appends definition of columns for entity name and JSON data
         builder
-                .append(ENTITY_NAME_COLUMN + " TEXT,")
+                .append(ENTITY_NAME_COLUMN + " TEXT, ")
                 .append(buildJsonDataColumnName(cls)).append(" TEXT,");
 
         String primaryKeyScript = buildPrimaryKeyScript(columnFields);
@@ -191,7 +190,8 @@ public class DatabaseTools {
             if (columnAnno == null) {
                 continue;
             }
-            if (field.getAnnotation(Id.class) != null) {
+            boolean isIdField = field.getAnnotation(Id.class) != null;
+            if (isIdField) {
                 ids++;
             }
             String name = columnAnno.value();
@@ -202,6 +202,12 @@ public class DatabaseTools {
                 throw new IncorrectMappingException(field);
             }
             columnNames.add(name);
+            if (isIdField && name.equals(BaseColumns._ID)) {
+                Class type = field.getType();
+                if (type != Long.class && type != Long.TYPE) {
+                    throw new InvalidRowIdMappingException(cls);
+                }
+            }
         }
         if (ids != 1) {
             throw new InvalidEntityIdMappingException(ids, cls);
@@ -213,14 +219,14 @@ public class DatabaseTools {
     }
 
     /**
-     * Extract all fields, which are annotated with {@link Column} and should be persisted. Do not extracts _id field
+     * Extract all fields, which are annotated with {@link Id} or {@link Column} and should be persisted. Do not extracts _id field
      */
     public <T> List<Field> extractFields(Class<T> cls) {
         return extractColumnsFields(cls, null);
     }
 
     /**
-     * Extract all fields, which are annotated with {@link Column} having {@link Column#index()} set to true and should be persisted. Do not extracts _id field
+     * Extract all fields, which are annotated with {@link Id} or {@link Column} having {@link Column#index()} set to true and should be persisted. Do not extracts _id field
      */
     public  <T> List<Field> extractIndexedFields(Class<T> cls) {
         return extractColumnsFields(cls, true);
@@ -262,13 +268,6 @@ public class DatabaseTools {
                 continue;
             }
             String name = columnAnnotation == null ? EMPTY_COLUMN_MANE : columnAnnotation.value();
-            if (name.isEmpty()) {
-                name = field.getName();
-            }
-            if (name.equals(BaseColumns._ID)) {
-                resultList.remove(i--);
-                continue;
-            }
             if (idAnnotation != null && !isIdShouldBeInherited(cls, field)) {
                 resultList.remove(i--);
             }
@@ -290,7 +289,7 @@ public class DatabaseTools {
         if (columnName.isEmpty()) {
             columnName = field.getName();
         }
-        String type = dispatchType(field);
+        String type = dispatchType(field).name();
         StringBuilder builder = new StringBuilder(columnName.length() + type.length() + 1);
         builder.append(columnName);
         builder.append(' ');
@@ -311,10 +310,7 @@ public class DatabaseTools {
             if (name.isEmpty()) {
                 name = column.getName();
             }
-            if (name.equals(BaseColumns._ID) &&
-                    Number.class.isAssignableFrom(column.getType()) &&
-                    column.getType() != Float.class && column.getType() != Float.TYPE &&
-                    column.getType() != Double.class && column.getType() != Double.TYPE) {
+            if (name.equals(BaseColumns._ID)) {
                 hasRowIdDefinition = true;
             }
         }
@@ -331,51 +327,63 @@ public class DatabaseTools {
      * @return string value which is one of
      * <ul>
      *     <li>
-     *
+     *          {@link SqliteDataType#NULL}
+     *     </li>
+     *     <li>
+     *          {@link SqliteDataType#INTEGER}
+     *     </li>
+     *     <li>
+     *          {@link SqliteDataType#REAL}
+     *     </li>
+     *     <li>
+     *          {@link SqliteDataType#TEXT}
+     *     </li>
+     *     <li>
+     *          {@link SqliteDataType#BLOB}
      *     </li>
      * </ul>
      */
-    public String dispatchType(Field field) {
+    public SqliteDataType dispatchType(Field field) {
         Column.DataType dataType = field.getAnnotation(Column.class).dataType();
 
         switch (dataType) {
             case DATE_MILLIS:
             case ENUM_ORDINAL:
-                return SQLITE_TYPE_INTEGER;
+                return SqliteDataType.INTEGER;
             case DATE_TIMESTAMP:
             case ENUM_STRING:
             case JSON_STRING:
-                return SQLITE_TYPE_TEXT;
+                return SqliteDataType.TEXT;
             case SERIALIZABLE:
             case BLOB:
             case BLOB_STRING:
-                return SQLITE_TYPE_BLOB;
+                return SqliteDataType.BLOB;
             default:
             case AUTO:
                 Class cls = field.getType();
                 if (cls == Boolean.TYPE || cls == Boolean.class) {
-                    return SQLITE_TYPE_TEXT;
+                    return SqliteDataType.TEXT;
                 }
                 if (cls == Character.TYPE || cls == Character.class) {
-                    return SQLITE_TYPE_TEXT;
+                    return SqliteDataType.TEXT;
                 }
                 if (cls.isPrimitive() || Number.class.isAssignableFrom(cls)) {
                     if (cls == Float.TYPE || cls == Float.class ||
                             cls == Double.TYPE || cls == Double.class) {
-                        return SQLITE_TYPE_REAL;
+                        return SqliteDataType.REAL;
                     }
-                    return SQLITE_TYPE_INTEGER;
+                    return SqliteDataType.INTEGER;
                 }
                 if (Date.class.isAssignableFrom(cls)) {
-                    return SQLITE_TYPE_INTEGER;
+                    return SqliteDataType.INTEGER;
                 }
                 if (cls.isEnum()) {     //ENUM_STRING
-                    return SQLITE_TYPE_TEXT;
+                    return SqliteDataType.TEXT;
                 }
                 if (String.class.isAssignableFrom(cls)) {
-                    return SQLITE_TYPE_TEXT;
+                    return SqliteDataType.TEXT;
                 }
-                return SQLITE_TYPE_TEXT;
+                return SqliteDataType.TEXT;
         }
     }
 
@@ -452,17 +460,18 @@ public class DatabaseTools {
 
     /**
      * Converts value from data type to entity's property value
-     * @param field target field
+     * @param fieldDescriptor target field descriptor
      * @param val the value to be converted
      * @return converted value
      */
-    public Object convert(Field field, Object val) {
+    public Object convert(ColumnDescriptor fieldDescriptor, Object val) {
 
         if (val == null) {
             return null;
         }
 
-        Column.DataType dataType = field.getAnnotation(Column.class).dataType();
+        Field field = fieldDescriptor.getField();
+        Column.DataType dataType = fieldDescriptor.getColumnPersistingDataTypeStrategy();
 
         switch (dataType) {
             case DATE_MILLIS:
@@ -566,36 +575,6 @@ public class DatabaseTools {
     }
 
     /**
-     * Tries to set rowId to field with column name or property with name {@link BaseColumns#_ID}
-     * @param entity target entity
-     * @param rowId the id to be set
-     */
-    public <T> void setRowId(T entity, long rowId) {
-        if (entity instanceof Persistable) {
-            ((Persistable) entity).setRowId(rowId);
-        }
-        Field[] fields = entity.getClass().getDeclaredFields();
-        Field target = null;
-        for (Field field : fields) {
-            if (field.getAnnotation(Id.class) != null && field.getName().equals(BaseColumns._ID)) {
-                target = field;
-                break;
-            }
-            Column columnAnno = field.getAnnotation(Column.class);
-            if (columnAnno == null) {
-                continue;
-            }
-            String name = columnAnno.value().isEmpty() ? field.getName() : columnAnno.value();
-            if (name.equals(BaseColumns._ID)) {
-                target = field;
-                break;
-            }
-        }
-        if (target != null) {
-            Alice.reflectionTools.setValue(target, entity, rowId);
-        }
-    }
-    /**
      * Tries to get rowId to field with column name or property with name {@link BaseColumns#_ID}
      * @param entity target entity
      * @return extracted rowId if possible and null otherwise
@@ -648,5 +627,15 @@ public class DatabaseTools {
         }
         List<Field> columnFields = extractFields(cls);
         validateFields(columnFields, cls);
+    }
+
+    public List<EntityDescriptor> generateDescriptorsFor(List<Class<?>> classes) {
+        validateEntityClasses(classes);
+        List<EntityDescriptor> result = new ArrayList<>(classes.size());
+        for (Class<?> cls : classes) {
+            EntityDescriptor entityDescriptor = new EntityDescriptor(cls);
+            result.add(entityDescriptor);
+        }
+        return result;
     }
 }

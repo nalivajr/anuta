@@ -13,7 +13,7 @@ import java.util.List;
  * Created by Sergey Nalivko.
  * email: snalivko93@gmail.com
  */
-public class ReflectionTools {
+public final class ReflectionTools {
 
     public static final String TAG = ReflectionTools.class.getSimpleName();
 

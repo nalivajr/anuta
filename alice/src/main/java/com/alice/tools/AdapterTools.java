@@ -18,7 +18,7 @@ import java.util.Map;
  * Created by Sergey Nalivko.
  * email: snalivko93@gmail.com
  */
-public class AdapterTools {
+public final class AdapterTools {
 
     AdapterTools() {
     }

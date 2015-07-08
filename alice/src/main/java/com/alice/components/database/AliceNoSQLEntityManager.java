@@ -7,6 +7,9 @@ import android.provider.BaseColumns;
 import android.util.Log;
 
 import com.alice.annonatations.database.Entity;
+import com.alice.components.database.models.ColumnDescriptor;
+import com.alice.components.database.models.EntityDescriptor;
+import com.alice.components.database.models.SqliteDataType;
 import com.alice.tools.Alice;
 import com.alice.tools.DatabaseTools;
 import com.google.gson.Gson;
@@ -36,22 +39,16 @@ public abstract class AliceNoSQLEntityManager extends AbstractEntityManager {
     public static final String TAG = AliceNoSQLEntityManager.class.getSimpleName();
 
     private Gson gson;
-    private Map<Class<?>, List<Field>> entityToFields;
-    private Map<Field, String> fieldToKey;
+    private Map<Class<?>, EntityDescriptor> entityToDescriptor;
 
     public AliceNoSQLEntityManager(Context context) {
         super(context);
-        final List<Class<?>> entityClasses = getEntityClasses();
+        List<Class<?>> entityClasses = getEntityClasses();
+        final List<EntityDescriptor> entityDescriptors = Alice.databaseTools.generateDescriptorsFor(entityClasses);
         gson = createGsonConverter(entityClasses);
-        entityToFields = new HashMap<>();
-        fieldToKey = new HashMap<>();
-        for (Class<?> cls : entityClasses) {
-            List<Field> fields = Alice.databaseTools.extractFields(cls);
-            entityToFields.put(cls, fields);
-            for (Field field : fields) {
-                String key = getFieldKey(field);
-                fieldToKey.put(field, key);
-            }
+        entityToDescriptor = new HashMap<>();
+        for (EntityDescriptor descriptor : entityDescriptors) {
+            entityToDescriptor.put(descriptor.getEntityClass(), descriptor);
         }
     }
 
@@ -82,7 +79,7 @@ public abstract class AliceNoSQLEntityManager extends AbstractEntityManager {
                 long convEnd = System.currentTimeMillis();
                 coversionTime += (convEnd - convStart);
 
-                Alice.databaseTools.setRowId(entity, rowId);
+                setEntityRowId(entity, rowId);
                 entities.add(entity);
                 isCursorReady = cursor.moveToNext();
                 readLeft--;
@@ -106,7 +103,10 @@ public abstract class AliceNoSQLEntityManager extends AbstractEntityManager {
         List<Field> fields = Alice.databaseTools.extractIndexedFields(entity.getClass());
         ContentValues contentValues = new ContentValues();
         for (Field field : fields) {
-            String key = getFieldKey(field);
+            String key = entityToDescriptor.get(entity.getClass()).getFieldKey(field);
+            if (key.equals(BaseColumns._ID)) {
+                continue;
+            }
             Object val = Alice.databaseTools.getFieldValue(field, entity);
             Alice.databaseTools.putValue(contentValues, key, val);
         }
@@ -142,11 +142,16 @@ public abstract class AliceNoSQLEntityManager extends AbstractEntityManager {
         public JsonElement serialize(Object src, Type typeOfSrc, JsonSerializationContext context) {
             JsonObject jsonObject = new JsonObject();
 
-            List<Field> fields = entityToFields.get(src.getClass());
+            EntityDescriptor entityDescriptor = entityToDescriptor.get(src.getClass());
+            List<Field> fields = entityDescriptor.getFields();
 
             for (Field field : fields) {
+                String fieldKey = entityDescriptor.getFieldKey(field);
+                if (fieldKey.equals(BaseColumns._ID)) {
+                    continue;
+                }
                 Object val = Alice.databaseTools.getFieldValue(field, src);
-                jsonObject.add(getFieldKey(field), context.serialize(val));
+                jsonObject.add(fieldKey, context.serialize(val));
             }
             return jsonObject;
         }
@@ -169,26 +174,31 @@ public abstract class AliceNoSQLEntityManager extends AbstractEntityManager {
 
             JsonObject object = json.getAsJsonObject();
             long start = System.currentTimeMillis();
-            List<Field> fields = entityToFields.get(targetClass);
+            EntityDescriptor entityDescriptor = entityToDescriptor.get(targetClass);
+            List<Field> fields = entityDescriptor.getFields();
 
             for (Field field : fields) {
-                String name = fieldToKey.get(field);
+                String name = entityDescriptor.getFieldKey(field);
+                if (name.equals(BaseColumns._ID)) {
+                    continue;
+                }
+                ColumnDescriptor fieldDescriptor = entityDescriptor.getFieldDescriptor(field);
                 JsonElement element = object.get(name);
-                String type = Alice.databaseTools.dispatchType(field);
+                SqliteDataType type = entityDescriptor.getFieldSqltype(field);
                 Object converted = null;
                 switch (type) {
-                    case DatabaseTools.SQLITE_TYPE_BLOB:
+                    case BLOB:
                         byte[] bytes = context.deserialize(element, byte[].class);
-                        converted = Alice.databaseTools.convert(field, bytes);
+                        converted = Alice.databaseTools.convert(fieldDescriptor, bytes);
                         break;
-                    case DatabaseTools.SQLITE_TYPE_TEXT:
-                        converted = Alice.databaseTools.convert(field, element.getAsString());
+                    case TEXT:
+                        converted = Alice.databaseTools.convert(fieldDescriptor, element.getAsString());
                         break;
-                    case DatabaseTools.SQLITE_TYPE_INTEGER:
-                        converted = Alice.databaseTools.convert(field, element.getAsLong());
+                    case INTEGER:
+                        converted = Alice.databaseTools.convert(fieldDescriptor, element.getAsLong());
                         break;
-                    case DatabaseTools.SQLITE_TYPE_REAL:
-                        converted = Alice.databaseTools.convert(field, element.getAsDouble());
+                    case REAL:
+                        converted = Alice.databaseTools.convert(fieldDescriptor, element.getAsDouble());
                         break;
                 }
                 Alice.reflectionTools.setValue(field, entity, converted);

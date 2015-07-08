@@ -21,7 +21,7 @@ import java.lang.reflect.Field;
  * Created by Sergey Nalivko.
  * email: snalivko93@gmail.com
  */
-public class ViewTools {
+public final class ViewTools {
 
     public static final String TAG = String.format("%s.%s", Alice.class.getSimpleName(), ViewTools.class.getSimpleName());
 

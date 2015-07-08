@@ -1,6 +1,5 @@
 package com.alice.components.database;
 
-import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
@@ -10,17 +9,17 @@ import android.provider.BaseColumns;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
-import com.alice.annonatations.database.Column;
-import com.alice.annonatations.database.Entity;
-import com.alice.annonatations.database.Id;
-import com.alice.components.database.models.Identifiable;
+import com.alice.components.database.models.EntityDescriptor;
+import com.alice.components.database.models.Persistable;
 import com.alice.exceptions.NotRegisteredEntityClassUsedException;
 import com.alice.tools.Alice;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by Sergey Nalivko.
@@ -32,11 +31,17 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
 
     private Context context;
     private HashSet<Class<?>> entitiesSet;
+    protected Map<Class<?>, EntityDescriptor> entityToDescriptor;
 
     public AbstractEntityManager(Context context) {
         this.context = context;
-        entitiesSet = new HashSet<>(getEntityClasses());
-        Alice.databaseTools.validateEntityClasses(entitiesSet);
+        List<Class<?>> entityClasses = getEntityClasses();
+        final List<EntityDescriptor> entityDescriptors = Alice.databaseTools.generateDescriptorsFor(entityClasses);
+        entityToDescriptor = new HashMap<>();
+        for (EntityDescriptor descriptor : entityDescriptors) {
+            entityToDescriptor.put(descriptor.getEntityClass(), descriptor);
+        }
+        entitiesSet = new HashSet<>(entityClasses);
     }
 
     /**
@@ -119,6 +124,7 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
         if (entity == null) {
             throw new RuntimeException("Attempt to update null entity");
         }
+        //TODO: think how to define is entity persisted if no row id specified
         if (Alice.databaseTools.getRowId(entity) == null) {
             return save(entity);
         }
@@ -158,12 +164,8 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
     @Nullable
     private <T> String getEntityId(T entity) {
         Object id = null;
-        if (entity instanceof Identifiable) {
-            id = ((Identifiable) entity).getId();
-        } else {
-            Field idFiled = Alice.reflectionTools.getFieldsAnnotatedWith(entity.getClass(), Id.class).get(0);
-            id = Alice.reflectionTools.getValue(idFiled, entity);
-        }
+        Field idField = entityToDescriptor.get(entity.getClass()).getIdField();
+        id = Alice.reflectionTools.getValue(idField, entity);
         String strId = null;
         if (id != null) {
             strId = id.toString();
@@ -178,33 +180,23 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
     }
 
     protected <T> void setEntityRowId(T entity, long rowId) {
-        Alice.databaseTools.setRowId(entity, rowId);
+        if (entity instanceof Persistable) {
+            ((Persistable) entity).setRowId(rowId);
+            return;
+        }
+        Field rowIdField = entityToDescriptor.get(entity.getClass()).getRowIdField();
+        if (rowIdField != null) {
+            Alice.reflectionTools.setValue(rowIdField, entity, rowId);
+        }
     }
 
     protected <T> Uri getUri(Class<T> entityClass) {
         checkClassRegistered(entityClass);
-        Entity entityAnnotation = entityClass.getAnnotation(Entity.class);
-        String tableName = entityAnnotation.tableName();
-        if (tableName == null) {
-            tableName = entityClass.getSimpleName();
-        }
-        String authority = entityAnnotation.authority();
-
-        try {
-            return new Uri.Builder()
-                    .scheme(ContentResolver.SCHEME_CONTENT)
-                    .authority(authority)
-                    .appendPath(tableName)
-                    .build();
-        } catch (Throwable e) {
-            Log.e(TAG, String.format("Uri for entity %s is incorrect", entityClass.getSimpleName()), e);
-            throw e;
-        }
+        return entityToDescriptor.get(entityClass).getTableUri();
     }
 
     private <T> String getIdColumnName(Class<T> entityClass) {
-        List<Field> fields = Alice.reflectionTools.getFieldsAnnotatedWith(entityClass, Id.class);
-        return getFieldKey(fields.get(0));
+        return entityToDescriptor.get(entityClass).getIdColumnName();
     }
 
     private <T> String[] getProjectionWithRowId(Class<T> entityClass) {
@@ -218,19 +210,6 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
         projectionExt[0] = BaseColumns._ID;
         System.arraycopy(projection, 0, projectionExt, 1, projection.length);
         return projectionExt;
-    }
-
-    protected String getFieldKey(Field field) {
-        Column columnAnnotation = field.getAnnotation(Column.class);
-        Id idAnnotation = field.getAnnotation(Id.class);
-        if (columnAnnotation == null && idAnnotation != null) {
-            return field.getName();
-        }
-        String key = columnAnnotation.value();
-        if (key.isEmpty()) {
-            key = field.getName();
-        }
-        return key;
     }
 
     protected  <T> T createEntity(Class<T> entityClass) {

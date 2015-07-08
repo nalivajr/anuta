@@ -4,7 +4,7 @@ package com.alice.tools;
  * Created by Sergey Nalivko.
  * email: snalivko93@gmail.com
  */
-public class Alice {
+public final class Alice {
 
     public static final ViewTools viewTools = new ViewTools();
 
