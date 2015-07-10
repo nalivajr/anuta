@@ -3,6 +3,7 @@ package com.alice.sample.database.models;
 import com.alice.annonatations.database.Column;
 import com.alice.annonatations.database.Entity;
 import com.alice.annonatations.database.Id;
+import com.alice.annonatations.database.ParentEntity;
 import com.alice.components.database.models.Identifiable;
 import com.alice.sample.database.Contract;
 
@@ -102,6 +103,9 @@ public class SubSubItem extends SubItem implements Identifiable<String> {
 
     @Column(dataType = Column.DataType.JSON_STRING)
     private TestPojo testPojo = new TestPojo();
+
+    @ParentEntity
+    private Item parent;
 
     @Override
     public String getId() {

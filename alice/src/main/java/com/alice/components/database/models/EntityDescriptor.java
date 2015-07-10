@@ -34,6 +34,7 @@ public class EntityDescriptor {
     private Field idField;
 
     private List<Field> fields;
+    private List<Field> indexFields;
     private Map<Field, ColumnDescriptor> fieldsToDescriptorMap;
 
     public EntityDescriptor(Class<?> entityClass) {
@@ -119,11 +120,17 @@ public class EntityDescriptor {
 
     private void initMaps() {
         fields = new ArrayList<>(Alice.databaseTools.extractFields(entityClass));
+        indexFields = new ArrayList<>(fields.size());
         fieldsToDescriptorMap = new HashMap<>(fields.size());
         for (Field field : fields) {
-            fieldsToDescriptorMap.put(field, new ColumnDescriptor(field));
+            ColumnDescriptor columnDescriptor = new ColumnDescriptor(field);
+            fieldsToDescriptorMap.put(field, columnDescriptor);
+            if (columnDescriptor.isIndexed()) {
+                indexFields.add(field);
+            }
         }
         fields = Collections.unmodifiableList(fields);
+        indexFields = Collections.unmodifiableList(indexFields);
         fieldsToDescriptorMap = Collections.unmodifiableMap(fieldsToDescriptorMap);
     }
 
@@ -173,5 +180,9 @@ public class EntityDescriptor {
 
     public ColumnDescriptor getFieldDescriptor(Field field) {
         return fieldsToDescriptorMap.get(field);
+    }
+
+    public List<Field> getIndexFields() {
+        return indexFields;
     }
 }

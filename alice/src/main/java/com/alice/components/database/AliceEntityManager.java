@@ -1,5 +1,6 @@
 package com.alice.components.database;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -7,6 +8,14 @@ import java.util.List;
  * email: snalivko93@gmail.com
  */
 public interface AliceEntityManager {
+
+    /**
+     * Saves entity in database
+     * @param entity the entity to be saved
+     * @param <T> the type if target entity
+     * @return saved entity
+     */
+    public <T> T save(T entity);
 
     /**
      * Loads the entity from data source using entity's id
@@ -25,21 +34,6 @@ public interface AliceEntityManager {
     public <T> T update(T entity);
 
     /**
-     * Finds all entities of the given type
-     * @param <T> the type if target entity
-     * @return list of found entities or empty list if nothing was found
-     */
-    public <T> List<T> findAll(Class<T> entityClass);
-
-    /**
-     * Saves entity in database
-     * @param entity the entity to be saved
-     * @param <T> the type if target entity
-     * @return saved entity
-     */
-    public <T> T save(T entity);
-
-    /**
      * Deletes entity from database
      * @param entity the entity to be deleted
      * @param <T> the type if target entity
@@ -55,4 +49,40 @@ public interface AliceEntityManager {
      * @return true if was removed and false otherwise
      */
     public <T> boolean delete(Class<T> entityClass, String id);
+
+    /**
+     * Finds all entities of the given type
+     * @param <T> the type if target entity
+     * @return list of found entities or empty list if nothing was found
+     */
+    public <T> List<T> findAll(Class<T> entityClass);
+
+    /**
+     * Saves all entities into database
+     * @param <T> the type if target entity
+     * @return collection of saved entities
+     */
+    public <T> Collection<T> saveAll(Collection<T> entities);
+
+    /**
+     * Updates all entities in database
+     * @param <T> the type if target entity
+     * @return collection of updated entities
+     */
+    public <T> Collection<T> updateAll(Collection<T> entities);
+
+    /**
+     * Deletes all entities in database
+     * @param <T> the type if target entity
+     * @return collection of updated entities
+     */
+    public <T> boolean deleteAll(Collection<T> entities);
+
+    /**
+     * Deletes all entities in database
+     * @param ids collection of ids for entities to be deleted
+     * @param <T> the type if target entity
+     * @return collection of updated entities
+     */
+    public <T> boolean deleteAll(Class<T> entityClass, Collection<String> ids);
 }

@@ -1,11 +1,14 @@
 package com.alice.components.database;
 
+import android.content.ContentProviderOperation;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
+import android.net.Uri;
 import android.provider.BaseColumns;
 import android.util.Log;
 
+import com.alice.annonatations.database.Column;
 import com.alice.annonatations.database.Entity;
 import com.alice.components.database.models.ColumnDescriptor;
 import com.alice.components.database.models.EntityDescriptor;
@@ -50,6 +53,15 @@ public abstract class AliceNoSQLEntityManager extends AbstractEntityManager {
         for (EntityDescriptor descriptor : entityDescriptors) {
             entityToDescriptor.put(descriptor.getEntityClass(), descriptor);
         }
+    }
+
+    @Override
+    protected <T> ArrayList<ContentProviderOperation> generateOperationsToSave(Uri uri, T entity) {
+        ArrayList<ContentProviderOperation> operations = new ArrayList<>();
+        ContentProviderOperation.Builder operationBuilder = ContentProviderOperation.newInsert(uri);
+        operationBuilder.withValues(convertToContentValues(entity));
+        operations.add(operationBuilder.build());
+        return operations;
     }
 
     @Override
@@ -100,14 +112,16 @@ public abstract class AliceNoSQLEntityManager extends AbstractEntityManager {
 
     @Override
     protected <T> ContentValues convertToContentValues(T entity) {
-        List<Field> fields = Alice.databaseTools.extractIndexedFields(entity.getClass());
+        EntityDescriptor entityDescriptor = entityToDescriptor.get(entity.getClass());
+        List<Field> fields = entityDescriptor.getIndexFields();
         ContentValues contentValues = new ContentValues();
         for (Field field : fields) {
-            String key = entityToDescriptor.get(entity.getClass()).getFieldKey(field);
+            String key = entityDescriptor.getFieldKey(field);
             if (key.equals(BaseColumns._ID)) {
                 continue;
             }
-            Object val = Alice.databaseTools.getFieldValue(field, entity);
+            Column.DataType dataType = entityDescriptor.getFieldDescriptor(field).getColumnPersistingDataTypeStrategy();
+            Object val = Alice.databaseTools.getFieldValue(field, dataType, entity);
             Alice.databaseTools.putValue(contentValues, key, val);
         }
 
@@ -150,7 +164,8 @@ public abstract class AliceNoSQLEntityManager extends AbstractEntityManager {
                 if (fieldKey.equals(BaseColumns._ID)) {
                     continue;
                 }
-                Object val = Alice.databaseTools.getFieldValue(field, src);
+                Column.DataType dataType = entityDescriptor.getFieldDescriptor(field).getColumnPersistingDataTypeStrategy();
+                Object val = Alice.databaseTools.getFieldValue(field, dataType, src);
                 jsonObject.add(fieldKey, context.serialize(val));
             }
             return jsonObject;

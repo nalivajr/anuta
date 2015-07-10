@@ -12,6 +12,7 @@ import com.alice.components.database.AliceEntityManager;
 import com.alice.sample.R;
 import com.alice.sample.database.models.SubSubItem;
 
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
@@ -49,10 +50,23 @@ public class DatabaseSampleActivity extends Activity{
             @Override
             public void onClick(View v) {
 
-                SubSubItem subSubItem = new SubSubItem();
-                subSubItem.setId("subSubItemId" + System.currentTimeMillis());
-                subSubItem.setSubSubItemData("Sub-sub-item-data");
-                oldestEntity = entityManager.save(subSubItem);
+                int count = 1000;
+                long time = 0;
+                String id = "subSubItemId" + System.currentTimeMillis();
+                SubSubItem[] subSubItems = new SubSubItem[count];
+                for (int i = 0; i < count; i++) {
+                    SubSubItem subSubItem = new SubSubItem();
+                    subSubItem.setId(id + i);
+                    subSubItem.setSubSubItemData("Sub-sub-item-data");
+//                    oldestEntity = entityManager.save(subSubItem);
+                    subSubItems[i] = subSubItem;
+                    oldestEntity = subSubItem;
+                }
+                long start = System.currentTimeMillis();
+                entityManager.saveAll(Arrays.asList(subSubItems));
+                long end = System.currentTimeMillis();
+                time += (end - start);
+                Toast.makeText(DatabaseSampleActivity.this, String.format("To save %d items were spent %d millis", count, time), Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -63,7 +77,7 @@ public class DatabaseSampleActivity extends Activity{
                 List<SubSubItem> itemsList = entityManager.findAll(SubSubItem.class);
                 long end = System.currentTimeMillis();
                 oldestEntity = itemsList.isEmpty() ? null : itemsList.get(0);
-                Toast.makeText(DatabaseSampleActivity.this, String.format("To read %d items were spent %d millis", itemsList.size(), (end - start)), Toast.LENGTH_LONG).show();
+                Toast.makeText(DatabaseSampleActivity.this, String.format("To read %d items were spent %d millis", itemsList.size(), (end - start)), Toast.LENGTH_SHORT).show();
             }
         });
 

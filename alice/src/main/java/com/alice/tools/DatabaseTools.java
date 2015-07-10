@@ -17,7 +17,6 @@ import com.alice.exceptions.InvalidDataTypeException;
 import com.alice.exceptions.InvalidEntityIdMappingException;
 import com.alice.exceptions.InvalidRowIdMappingException;
 import com.alice.exceptions.NotAnnotatedEntityException;
-import com.alice.exceptions.NotAnnotatedFieldException;
 import com.google.gson.Gson;
 
 import java.lang.reflect.Field;
@@ -37,8 +36,6 @@ import java.util.Set;
  */
 public final class DatabaseTools {
     public static final String ENTITY_NAME_COLUMN = "entityName";
-
-    private static final String EMPTY_COLUMN_MANE = "";
 
     private static final String TAG = DatabaseTools.class.getSimpleName();
     private static final Gson gson = new Gson();
@@ -267,7 +264,6 @@ public final class DatabaseTools {
                 resultList.remove(i--);
                 continue;
             }
-            String name = columnAnnotation == null ? EMPTY_COLUMN_MANE : columnAnnotation.value();
             if (idAnnotation != null && !isIdShouldBeInherited(cls, field)) {
                 resultList.remove(i--);
             }
@@ -393,13 +389,7 @@ public final class DatabaseTools {
      * @param entity source entity
      * @return converted value, corresponding to {@link com.alice.annonatations.database.Column.DataType}
      */
-    public Object getFieldValue(Field field, Object entity) {
-        Column annotation = field.getAnnotation(Column.class);
-        if (annotation == null) {
-            throw new NotAnnotatedFieldException(field);
-        }
-        Column.DataType dataType = annotation.dataType();
-
+    public Object getFieldValue(Field field, Column.DataType dataType, Object entity) {
         Object val = null;
         field.setAccessible(true);
         try {

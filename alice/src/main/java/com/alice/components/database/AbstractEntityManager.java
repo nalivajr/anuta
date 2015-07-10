@@ -1,23 +1,31 @@
 package com.alice.components.database;
 
+import android.content.ContentProviderOperation;
+import android.content.ContentProviderResult;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.OperationApplicationException;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.RemoteException;
 import android.provider.BaseColumns;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.alice.components.database.models.EntityDescriptor;
 import com.alice.components.database.models.Persistable;
+import com.alice.exceptions.DifferentEntityClassesException;
 import com.alice.exceptions.NotRegisteredEntityClassUsedException;
+import com.alice.exceptions.OperationExecutionException;
 import com.alice.tools.Alice;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -49,7 +57,7 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
      * @param entityClass target entity class
      * @param cursor cursor with data
      * @param count amount of entities to read from cursor. -1 means all possible entities (all form cursor)
-     * @return list of converted entities. If no entitites was read or any error occurred should return empty list
+     * @return list of converted entities. If no entities was read or any error occurred should return empty list
      */
     protected abstract <T> List<T> convertCursorToEntities(Class<T> entityClass, Cursor cursor, int count);
 
@@ -71,6 +79,15 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
      * @return list of entity classes managed by this entity manager
      */
     protected abstract List<Class<?>> getEntityClasses();
+
+    /**
+     * Generates operations, which are required to save entity
+     *
+     * @param uri table uri
+     * @param entity entity to be saved
+     * @return {@link ArrayList} of operations
+     */
+    protected abstract <T> ArrayList<ContentProviderOperation> generateOperationsToSave(Uri uri, T entity);
 
     @Override
     public <T> T find(Class<T> entityClass, String id) {
@@ -107,14 +124,22 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
         if (entity == null) {
             throw new RuntimeException("Attempt to save null entity");
         }
-        checkClassRegistered(entity.getClass());
+        Class<?> entityClass = entity.getClass();
+        checkClassRegistered(entityClass);
+        EntityDescriptor descriptor = entityToDescriptor.get(entityClass);
+        Uri tableUri = descriptor.getTableUri();
+        ArrayList<ContentProviderOperation> operations = generateOperationsToSave(tableUri, entity);
 
-        ContentValues contentValues = convertToContentValues(entity);
+        String tableUriStr = tableUri.toString();
 
-        Uri newUri = getContext().getContentResolver().insert(getUri(entity.getClass()), contentValues);
-        if (newUri != null) {
-            long rowId = ContentUris.parseId(newUri);
-            setEntityRowId(entity, rowId);
+        long prevId = -1;
+        ContentProviderResult[] results = applyOperations(operations, descriptor.getAuthority());
+        for (ContentProviderResult result : results) {
+            long id = ContentUris.parseId(result.uri);
+            if (result.uri.toString().contains(tableUriStr) && (prevId != id)) {
+                setEntityRowId(entity, id);
+                prevId = id;
+            }
         }
         return entity;
     }
@@ -161,6 +186,61 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
         return delete(entity.getClass(), strId);
     }
 
+    @Override
+    public <T> Collection<T> saveAll(Collection<T> entities) {
+        if (entities == null || entities.isEmpty()) {
+            Log.w(TAG, "Nothing to save. Collection is null or empty");
+            return entities;
+        }
+        Class<?> entityClass = checkAllEntitiesSameClass(entities);
+        checkClassRegistered(entityClass);
+        EntityDescriptor descriptor = entityToDescriptor.get(entityClass);
+        ArrayList<ContentProviderOperation> operations = new ArrayList<>(entities.size());
+        Uri tableUri = descriptor.getTableUri();
+
+        Object[] entitiesArray = entities.toArray();
+        for (Object entity : entitiesArray) {
+            operations.addAll(generateOperationsToSave(tableUri, entity));
+        }
+
+        String authority = descriptor.getAuthority();
+        ContentProviderResult[] results;
+        results = applyOperations(operations, authority);
+
+        for (int i = 0; i < results.length; i++) {
+            T entity = ((T) entitiesArray[i]);
+            ContentProviderResult result = results[i];
+            long id = ContentUris.parseId(result.uri);
+            setEntityRowId(entity, id);
+        }
+        return entities;
+    }
+
+    protected ContentProviderResult[] applyOperations(ArrayList<ContentProviderOperation> operations, String authority) {
+        ContentProviderResult[] result;
+        try {
+            result = context.getContentResolver().applyBatch(authority, operations);
+        } catch (RemoteException | OperationApplicationException e) {
+            throw new OperationExecutionException(e);
+        }
+        return result;
+    }
+
+    @Override
+    public <T> Collection<T> updateAll(Collection<T> entities) {
+        return null;
+    }
+
+    @Override
+    public <T> boolean deleteAll(Collection<T> entities) {
+        return false;
+    }
+
+    @Override
+    public <T> boolean deleteAll(Class<T> entityClass, Collection<String> ids) {
+        return false;
+    }
+
     @Nullable
     private <T> String getEntityId(T entity) {
         Object id = null;
@@ -179,6 +259,22 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
         }
     }
 
+    protected <T> Class<?> checkAllEntitiesSameClass(Collection<T> entities) {
+        Class<?> cls = null;
+        if (entities == null || entities.isEmpty()) {
+            Log.w(TAG, "Nothing to check. Collection is null or empty");
+            return null;
+        }
+        Iterator<T> iterator = entities.iterator();
+        cls = iterator.next().getClass();
+        while (iterator.hasNext()) {
+            if (iterator.next().getClass() != cls) {
+                throw new DifferentEntityClassesException();
+            }
+        }
+        return cls;
+    }
+
     protected <T> void setEntityRowId(T entity, long rowId) {
         if (entity instanceof Persistable) {
             ((Persistable) entity).setRowId(rowId);
@@ -188,6 +284,17 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
         if (rowIdField != null) {
             Alice.reflectionTools.setValue(rowIdField, entity, rowId);
         }
+    }
+
+    protected <T> Long getEntityRowId(T entity) {
+        if (entity instanceof Persistable) {
+            return ((Persistable) entity).getRowId();
+        }
+        Field rowIdField = entityToDescriptor.get(entity.getClass()).getRowIdField();
+        if (rowIdField != null) {
+            return (Long) Alice.reflectionTools.getValue(rowIdField, entity);
+        }
+        return null;
     }
 
     protected <T> Uri getUri(Class<T> entityClass) {
