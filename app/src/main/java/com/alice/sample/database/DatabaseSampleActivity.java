@@ -12,6 +12,7 @@ import com.alice.components.database.AliceEntityManager;
 import com.alice.sample.R;
 import com.alice.sample.database.models.SubSubItem;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -39,6 +40,8 @@ public class DatabaseSampleActivity extends Activity{
     private AliceEntityManager entityManager;
 
     private SubSubItem oldestEntity = null;
+
+    List<SubSubItem> subSubItemsList = new ArrayList<SubSubItem>(1000);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

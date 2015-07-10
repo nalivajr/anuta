@@ -1,10 +1,8 @@
 package com.alice.components.database;
 
-import android.content.ContentProviderOperation;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
-import android.net.Uri;
 import android.provider.BaseColumns;
 import android.util.Log;
 
@@ -53,15 +51,6 @@ public abstract class AliceNoSQLEntityManager extends AbstractEntityManager {
         for (EntityDescriptor descriptor : entityDescriptors) {
             entityToDescriptor.put(descriptor.getEntityClass(), descriptor);
         }
-    }
-
-    @Override
-    protected <T> ArrayList<ContentProviderOperation> generateOperationsToSave(Uri uri, T entity) {
-        ArrayList<ContentProviderOperation> operations = new ArrayList<>();
-        ContentProviderOperation.Builder operationBuilder = ContentProviderOperation.newInsert(uri);
-        operationBuilder.withValues(convertToContentValues(entity));
-        operations.add(operationBuilder.build());
-        return operations;
     }
 
     @Override

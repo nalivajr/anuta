@@ -2,8 +2,8 @@ package com.alice.sample.database;
 
 import android.database.sqlite.SQLiteDatabase;
 
-import com.alice.components.database.helpers.AliceNoSQLDatabaseHelper;
-import com.alice.components.database.providers.AliceNoSQLProvider;
+import com.alice.components.database.helpers.AliceRelationalDatabaseHelper;
+import com.alice.components.database.providers.AliceRelationalProvider;
 import com.alice.sample.database.models.SubSubItem;
 
 import java.util.ArrayList;
@@ -13,10 +13,10 @@ import java.util.List;
  * Created by Sergey Nalivko.
  * email: snalivko93@gmail.com
  */
-public class SampleProvider extends AliceNoSQLProvider {
+public class SampleProvider extends AliceRelationalProvider {
     @Override
-    protected AliceNoSQLDatabaseHelper createDatabaseHelper() {
-        return new AliceNoSQLDatabaseHelper(getContext(), "AliceSampleDB.db", null, Contract.DATABASE_VERSION) {
+    protected AliceRelationalDatabaseHelper createDatabaseHelper() {
+        return new AliceRelationalDatabaseHelper(getContext(), "AliceSampleDB.db", null, Contract.DATABASE_VERSION) {
             @Override
             public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
                 deleteEntitiesTables(db);

@@ -80,14 +80,6 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
      */
     protected abstract List<Class<?>> getEntityClasses();
 
-    /**
-     * Generates operations, which are required to save entity
-     *
-     * @param uri table uri
-     * @param entity entity to be saved
-     * @return {@link ArrayList} of operations
-     */
-    protected abstract <T> ArrayList<ContentProviderOperation> generateOperationsToSave(Uri uri, T entity);
 
     @Override
     public <T> T find(Class<T> entityClass, String id) {
@@ -144,35 +136,53 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
         return entity;
     }
 
+    /**
+     * Generates operations, which are required to save entity
+     *
+     * @param uri table uri
+     * @param entity entity to be saved
+     * @return {@link ArrayList} of operations
+     */
+    protected <T> ArrayList<ContentProviderOperation> generateOperationsToSave(Uri uri, T entity) {
+        ArrayList<ContentProviderOperation> operations = new ArrayList<>();
+        ContentProviderOperation.Builder operationBuilder = ContentProviderOperation.newInsert(uri);
+        operationBuilder.withValues(convertToContentValues(entity));
+        operations.add(operationBuilder.build());
+        return operations;
+    }
+
     @Override
     public <T> T update(T entity) {
         if (entity == null) {
             throw new RuntimeException("Attempt to update null entity");
         }
-        //TODO: think how to define is entity persisted if no row id specified
-        if (Alice.databaseTools.getRowId(entity) == null) {
-            return save(entity);
-        }
-        checkClassRegistered(entity.getClass());
 
-        ContentValues contentValues = convertToContentValues(entity);
+        Class<?> entityClass = entity.getClass();
+        checkClassRegistered(entityClass);
+        EntityDescriptor descriptor = entityToDescriptor.get(entityClass);
+        Uri tableUri = descriptor.getTableUri();
+        ArrayList<ContentProviderOperation> operations = generateOperationsToUpdate(tableUri, entity);
+        applyOperations(operations, descriptor.getAuthority());
 
-        getContext().getContentResolver().update(getUri(entity.getClass()), contentValues,
-                getIdColumnName(entity.getClass()) + "=?", new String[]{getEntityId(entity)});
         return entity;
     }
 
-    @Override
-    public <T> boolean delete(Class<T> entityClass, String id) {
-        checkClassRegistered(entityClass);
-        if (id == null) {
-            Log.w(TAG, "Attempt to delete entity with null id");
-            return false;
-        }
-        Uri uri = getUri(entityClass);
-        String idColumn = getIdColumnName(entityClass);
-        int res = context.getContentResolver().delete(uri, idColumn + "=?", new String[] { id } );
-        return res != 0;
+    /**
+     * Generates operations, which are required to update entity
+     *
+     * @param uri table uri
+     * @param entity entity to be saved
+     * @return {@link ArrayList} of operations
+     */
+    protected <T> ArrayList<ContentProviderOperation> generateOperationsToUpdate(Uri uri, T entity) {
+        ArrayList<ContentProviderOperation> operations = new ArrayList<>();
+        ContentProviderOperation.Builder operationBuilder = ContentProviderOperation.newUpdate(uri);
+        operationBuilder.withValues(convertToContentValues(entity));
+        String selection = getIdColumnName(entity.getClass()) + "=?";
+        String[] args = new String[]{getEntityId(entity)};
+        operationBuilder.withSelection(selection, args);
+        operations.add(operationBuilder.build());
+        return operations;
     }
 
     @Override
@@ -184,6 +194,36 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
         checkClassRegistered(entity.getClass());
         String strId = getEntityId(entity);
         return delete(entity.getClass(), strId);
+    }
+
+    @Override
+    public <T> boolean delete(Class<T> entityClass, String id) {
+        checkClassRegistered(entityClass);
+        if (id == null) {
+            Log.w(TAG, "Attempt to delete entity with null id");
+            return false;
+        }
+
+        EntityDescriptor descriptor = entityToDescriptor.get(entityClass);
+        ArrayList<ContentProviderOperation> operations = generateOperationsToDelete(descriptor.getTableUri(), descriptor.getIdColumnName(), id);
+        return applyOperations(operations, descriptor.getAuthority()).length != 0;
+    }
+
+    /**
+     * Generates operations, which are required to delete entity
+     *
+     * @param uri table uri
+     * @param idColumnName the name of entity's id column
+     *@param id entity's id  @return {@link ArrayList} of operations
+     */
+    protected ArrayList<ContentProviderOperation> generateOperationsToDelete(Uri uri, String idColumnName, String id) {
+        ArrayList<ContentProviderOperation> operations = new ArrayList<>();
+        ContentProviderOperation.Builder operationBuilder = ContentProviderOperation.newDelete(uri);
+        String selection = idColumnName + "=?";
+        String[] args = new String[]{getEntityId(id)};
+        operationBuilder.withSelection(selection, args);
+        operations.add(operationBuilder.build());
+        return operations;
     }
 
     @Override
@@ -228,17 +268,55 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
 
     @Override
     public <T> Collection<T> updateAll(Collection<T> entities) {
-        return null;
+        if (entities == null || entities.isEmpty()) {
+            Log.w(TAG, "Nothing to update. Collection is null or empty");
+            return entities;
+        }
+        Class<?> entityClass = checkAllEntitiesSameClass(entities);
+        checkClassRegistered(entityClass);
+        EntityDescriptor descriptor = entityToDescriptor.get(entityClass);
+        ArrayList<ContentProviderOperation> operations = new ArrayList<>(entities.size());
+        Uri tableUri = descriptor.getTableUri();
+
+        Object[] entitiesArray = entities.toArray();
+        for (Object entity : entitiesArray) {
+            operations.addAll(generateOperationsToUpdate(tableUri, entity));
+        }
+
+        String authority = descriptor.getAuthority();
+        applyOperations(operations, authority);
+        return entities;
     }
 
     @Override
     public <T> boolean deleteAll(Collection<T> entities) {
-        return false;
+        if (entities == null || entities.isEmpty()) {
+            Log.w(TAG, "Nothing to delete. Collection is null or empty");
+            return false;
+        }
+        Class<?> entityClass = checkAllEntitiesSameClass(entities);
+        List<String> ids = new ArrayList<>(entities.size());
+        for (T entity : entities) {
+            ids.add(getEntityId(entity));
+        }
+        return deleteAll(entityClass, ids);
     }
 
     @Override
     public <T> boolean deleteAll(Class<T> entityClass, Collection<String> ids) {
-        return false;
+        checkClassRegistered(entityClass);
+        EntityDescriptor descriptor = entityToDescriptor.get(entityClass);
+        ArrayList<ContentProviderOperation> operations = new ArrayList<>(ids.size());
+        Uri tableUri = descriptor.getTableUri();
+
+        //TODO: possibly correct variant of selection like 'WHERE id IN (?,?...?)' could be used, but leave this way as in future cascade deletion will be integrated
+        for (String id : ids) {
+            operations.addAll(generateOperationsToDelete(tableUri, descriptor.getIdColumnName(), id));
+        }
+
+        String authority = descriptor.getAuthority();
+        applyOperations(operations, authority);
+        return true;
     }
 
     @Nullable
@@ -284,17 +362,6 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
         if (rowIdField != null) {
             Alice.reflectionTools.setValue(rowIdField, entity, rowId);
         }
-    }
-
-    protected <T> Long getEntityRowId(T entity) {
-        if (entity instanceof Persistable) {
-            return ((Persistable) entity).getRowId();
-        }
-        Field rowIdField = entityToDescriptor.get(entity.getClass()).getRowIdField();
-        if (rowIdField != null) {
-            return (Long) Alice.reflectionTools.getValue(rowIdField, entity);
-        }
-        return null;
     }
 
     protected <T> Uri getUri(Class<T> entityClass) {

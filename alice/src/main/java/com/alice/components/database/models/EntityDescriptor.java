@@ -12,10 +12,13 @@ import com.alice.tools.Alice;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by Sergey Nalivko.
@@ -184,5 +187,17 @@ public class EntityDescriptor {
 
     public List<Field> getIndexFields() {
         return indexFields;
+    }
+
+    public Set<String> getFieldKeys() {
+        Set<String> result = new HashSet<>(fields.size());
+        for (Field field : fields) {
+           result.add(fieldsToDescriptorMap.get(field).getColumnName());
+        }
+        return result;
+    }
+
+    public Collection<ColumnDescriptor> getFieldDescriptors() {
+        return fieldsToDescriptorMap.values();
     }
 }

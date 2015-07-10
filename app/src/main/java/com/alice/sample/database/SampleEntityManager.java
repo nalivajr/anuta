@@ -2,7 +2,7 @@ package com.alice.sample.database;
 
 import android.content.Context;
 
-import com.alice.components.database.AliceNoSQLEntityManager;
+import com.alice.components.database.AliceRelationalEntityManager;
 import com.alice.sample.database.models.SubSubItem;
 
 import java.util.ArrayList;
@@ -12,7 +12,7 @@ import java.util.List;
  * Created by Sergey Nalivko.
  * email: snalivko93@gmail.com
  */
-public class SampleEntityManager extends AliceNoSQLEntityManager {
+public class SampleEntityManager extends AliceRelationalEntityManager {
     public SampleEntityManager(Context context) {
         super(context);
     }

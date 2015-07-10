@@ -111,7 +111,8 @@ public final class DatabaseTools {
 
         String primaryKeyScript = buildPrimaryKeyScript(columnFields);
         builder.append(primaryKeyScript);
-        builder.append(')').append(';');
+        builder.setCharAt(builder.length() - 1, ')');
+        builder.append(';');
         return builder.toString();
     }
 
@@ -373,6 +374,9 @@ public final class DatabaseTools {
                 if (Date.class.isAssignableFrom(cls)) {
                     return SqliteDataType.INTEGER;
                 }
+                if (cls == byte[].class) {
+                    return SqliteDataType.BLOB;
+                }
                 if (cls.isEnum()) {     //ENUM_STRING
                     return SqliteDataType.TEXT;
                 }
@@ -433,6 +437,9 @@ public final class DatabaseTools {
                     return String.valueOf(val);
                 }
                 if (cls.isPrimitive() || Number.class.isAssignableFrom(cls)) {
+                    return val;
+                }
+                if (cls == byte[].class) {     //ENUM_STRING
                     return val;
                 }
                 if (cls.isEnum()) {     //ENUM_STRING
@@ -524,6 +531,9 @@ public final class DatabaseTools {
                 if (cls.isEnum()) {     //ENUM_STRING
                     return Converter.getStringAsEnum((String) val, cls);
                 }
+                if (cls == byte[].class) {
+                    return val;
+                }
                 if (val instanceof byte[]) {
                     return Converter.readObject(field, (byte[])val);
                 }
@@ -548,7 +558,7 @@ public final class DatabaseTools {
         } else if (val instanceof String) {
             contentValues.put(key, (String)val);
         } else if (val instanceof byte[]) {
-            contentValues.put(key, (byte)val);
+            contentValues.put(key, (byte[])val);
         } else if (val instanceof Byte) {
             contentValues.put(key, (Byte)val);
         } else if (val instanceof Short) {
