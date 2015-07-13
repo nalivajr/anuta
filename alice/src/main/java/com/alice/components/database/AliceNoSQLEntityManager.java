@@ -26,6 +26,7 @@ import com.google.gson.JsonSerializer;
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -47,7 +48,7 @@ public abstract class AliceNoSQLEntityManager extends AbstractEntityManager {
         List<Class<?>> entityClasses = getEntityClasses();
         final List<EntityDescriptor> entityDescriptors = Alice.databaseTools.generateDescriptorsFor(entityClasses);
         gson = createGsonConverter(entityClasses);
-        entityToDescriptor = new HashMap<>();
+        entityToDescriptor = new HashMap<Class<?>, EntityDescriptor>();
         for (EntityDescriptor descriptor : entityDescriptors) {
             entityToDescriptor.put(descriptor.getEntityClass(), descriptor);
         }
@@ -69,28 +70,20 @@ public abstract class AliceNoSQLEntityManager extends AbstractEntityManager {
             }
             boolean isCursorReady = true;
             int readLeft = count;
-            long start = System.currentTimeMillis();
-            long coversionTime = 0;
             while ((readLeft > 0 || count == -1) && isCursorReady) {
                 long rowId = cursor.getLong(cursor.getColumnIndex(BaseColumns._ID));
                 String json = cursor.getString(cursor.getColumnIndex(columnName));
 
-                long convStart = System.currentTimeMillis();
                 T entity = gson.fromJson(json, entityClass);
-                long convEnd = System.currentTimeMillis();
-                coversionTime += (convEnd - convStart);
 
                 setEntityRowId(entity, rowId);
                 entities.add(entity);
                 isCursorReady = cursor.moveToNext();
                 readLeft--;
             }
-            long end = System.currentTimeMillis();
-            Log.i("[PERFORMANCE]", String.format("To read %d items were spent %d millis", entities.size(), (end - start)));
-            Log.i("[PERFORMANCE]", String.format("To convert %d items were spent %d millis", entities.size(), coversionTime));
         } catch (Throwable e) {
             Log.e(TAG, String.format("Error during converting cursor to %s", entityClass.getName()), e);
-            throw e;
+            throw new RuntimeException(e);
         } finally {
             if (cursor != null) {
                 cursor.close();
@@ -177,38 +170,34 @@ public abstract class AliceNoSQLEntityManager extends AbstractEntityManager {
             Object entity = createEntity(targetClass);
 
             JsonObject object = json.getAsJsonObject();
-            long start = System.currentTimeMillis();
             EntityDescriptor entityDescriptor = entityToDescriptor.get(targetClass);
-            List<Field> fields = entityDescriptor.getFields();
 
-            for (Field field : fields) {
-                String name = entityDescriptor.getFieldKey(field);
+            Collection<ColumnDescriptor> descriptors = entityDescriptor.getFieldDescriptors();
+            for (ColumnDescriptor column : descriptors) {
+                String name = column.getColumnName();
                 if (name.equals(BaseColumns._ID)) {
                     continue;
                 }
-                ColumnDescriptor fieldDescriptor = entityDescriptor.getFieldDescriptor(field);
                 JsonElement element = object.get(name);
-                SqliteDataType type = entityDescriptor.getFieldSqltype(field);
+                SqliteDataType type = column.getSqlLiteDataType();
                 Object converted = null;
                 switch (type) {
                     case BLOB:
                         byte[] bytes = context.deserialize(element, byte[].class);
-                        converted = Alice.databaseTools.convert(fieldDescriptor, bytes);
+                        converted = Alice.databaseTools.convert(column, bytes);
                         break;
                     case TEXT:
-                        converted = Alice.databaseTools.convert(fieldDescriptor, element.getAsString());
+                        converted = Alice.databaseTools.convert(column, element.getAsString());
                         break;
                     case INTEGER:
-                        converted = Alice.databaseTools.convert(fieldDescriptor, element.getAsLong());
+                        converted = Alice.databaseTools.convert(column, element.getAsLong());
                         break;
                     case REAL:
-                        converted = Alice.databaseTools.convert(fieldDescriptor, element.getAsDouble());
+                        converted = Alice.databaseTools.convert(column, element.getAsDouble());
                         break;
                 }
-                Alice.reflectionTools.setValue(field, entity, converted);
+                Alice.reflectionTools.setValue(column.getField(), entity, converted);
             }
-            long end = System.currentTimeMillis();
-            Log.i("[PERFORMANCE]", String.format("To convert an item were spent %d millis", (end - start)));
             return entity;
         }
     }

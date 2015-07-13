@@ -47,53 +47,47 @@ public abstract class AliceRelationalEntityManager extends AbstractEntityManager
             }
             boolean isCursorReady = true;
             int readLeft = count;
-            long start = System.currentTimeMillis();
-            long coversionTime = 0;
             while ((readLeft > 0 || count == -1) && isCursorReady) {
-                long rowId = cursor.getLong(cursor.getColumnIndex(BaseColumns._ID));
-
-                long convStart = System.currentTimeMillis();
-                T entity = createEntity(entityClass);
-                for (ColumnDescriptor column : columns) {
-                    SqliteDataType type = column.getSqlLiteDataType();
-                    Object converted = null;
-                    switch (type) {
-                        case BLOB:
-                            converted = Alice.databaseTools.convert(column, cursor.getBlob(cursor.getColumnIndex(column.getColumnName())));
-                            break;
-                        case TEXT:
-                            converted = Alice.databaseTools.convert(column, cursor.getString(cursor.getColumnIndex(column.getColumnName())));
-                            break;
-                        case INTEGER:
-                            converted = Alice.databaseTools.convert(column, cursor.getLong(cursor.getColumnIndex(column.getColumnName())));
-                            break;
-                        case REAL:
-                            converted = Alice.databaseTools.convert(column, cursor.getDouble(cursor.getColumnIndex(column.getColumnName())));
-                            break;
-                    }
-                    Alice.reflectionTools.setValue(column.getField(), entity, converted);
-                }
-
-                long convEnd = System.currentTimeMillis();
-                coversionTime += (convEnd - convStart);
-
-                setEntityRowId(entity, rowId);
-                entities.add(entity);
+                entities.add(cursorToEntity(entityClass, cursor, columns));
                 isCursorReady = cursor.moveToNext();
                 readLeft--;
             }
-            long end = System.currentTimeMillis();
-            Log.i("[PERFORMANCE]", String.format("To read %d items were spent %d millis", entities.size(), (end - start)));
-            Log.i("[PERFORMANCE]", String.format("To convert %d items were spent %d millis", entities.size(), coversionTime));
         } catch (Throwable e) {
             Log.e(TAG, String.format("Error during converting cursor to %s", entityClass.getName()), e);
-            throw e;
+            throw new RuntimeException(e);
         } finally {
             if (cursor != null) {
                 cursor.close();
             }
         }
         return entities;
+    }
+
+    private <T> T cursorToEntity(Class<T> entityClass, Cursor cursor, Collection<ColumnDescriptor> columns) {
+        long rowId = cursor.getLong(cursor.getColumnIndex(BaseColumns._ID));
+
+        T entity = createEntity(entityClass);
+        for (ColumnDescriptor column : columns) {
+            SqliteDataType type = column.getSqlLiteDataType();
+            Object converted = null;
+            switch (type) {
+                case BLOB:
+                    converted = Alice.databaseTools.convert(column, cursor.getBlob(cursor.getColumnIndex(column.getColumnName())));
+                    break;
+                case TEXT:
+                    converted = Alice.databaseTools.convert(column, cursor.getString(cursor.getColumnIndex(column.getColumnName())));
+                    break;
+                case INTEGER:
+                    converted = Alice.databaseTools.convert(column, cursor.getLong(cursor.getColumnIndex(column.getColumnName())));
+                    break;
+                case REAL:
+                    converted = Alice.databaseTools.convert(column, cursor.getDouble(cursor.getColumnIndex(column.getColumnName())));
+                    break;
+            }
+            Alice.reflectionTools.setValue(column.getField(), entity, converted);
+        }
+        setEntityRowId(entity, rowId);
+        return entity;
     }
 
     @Override

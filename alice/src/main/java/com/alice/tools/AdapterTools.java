@@ -34,7 +34,7 @@ public final class AdapterTools {
      * @return the map, which contains pairs: layout-resource-id -> list of ids of widgets from this layout
      */
     public Map<Integer, List<Integer>> buildIdsMap(Context context , int ... resLayoutsIds) {
-        Map<Integer, List<Integer>> result = new HashMap<>();
+        Map<Integer, List<Integer>> result = new HashMap<Integer, List<Integer>>();
         if (resLayoutsIds == null || resLayoutsIds.length == 0) {
             return result;
         }
@@ -46,7 +46,7 @@ public final class AdapterTools {
     }
 
     private List<Integer> parseLayout(Context context, int layoutId) {
-        List<Integer> ids = new ArrayList<>();
+        List<Integer> ids = new ArrayList<Integer>();
         XmlResourceParser parser = context.getResources().getLayout(layoutId);
         try {
             int eventType = parser.next();

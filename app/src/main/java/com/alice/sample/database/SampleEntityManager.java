@@ -19,7 +19,7 @@ public class SampleEntityManager extends AliceRelationalEntityManager {
 
     @Override
     protected List<Class<?>> getEntityClasses() {
-        List<Class<?>> list = new ArrayList<>();
+        List<Class<?>> list = new ArrayList<Class<?>>();
         list.add(SubSubItem.class);
         return list;
     }

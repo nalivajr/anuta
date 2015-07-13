@@ -83,7 +83,7 @@ public abstract class AliceContentProvider extends ContentProvider {
             database.setTransactionSuccessful();
         } catch (Throwable e) {
             Log.e(TAG, "Could not insert data", e);
-            throw e;
+            throw new RuntimeException(e);
         } finally {
             database.endTransaction();
         }
@@ -116,7 +116,7 @@ public abstract class AliceContentProvider extends ContentProvider {
             database.setTransactionSuccessful();
         } catch (Throwable e) {
             Log.e(TAG, "Could not delete data", e);
-            throw e;
+            throw new RuntimeException(e);
         } finally {
             database.endTransaction();
         }
@@ -139,7 +139,7 @@ public abstract class AliceContentProvider extends ContentProvider {
             database.setTransactionSuccessful();
         } catch (Throwable e) {
             Log.e(TAG, "Could not update data", e);
-            throw e;
+            throw new RuntimeException(e);
         } finally {
             database.endTransaction();
         }
@@ -151,9 +151,9 @@ public abstract class AliceContentProvider extends ContentProvider {
         int start = 10001;
         int step = 10000;
 
-        uriToTableName = new HashMap<>();
-        mimeCodeToMimeType = new HashMap<>();
-        tableNameToAuthority = new HashMap<>();
+        uriToTableName = new HashMap<String, String>();
+        mimeCodeToMimeType = new HashMap<Integer, String>();
+        tableNameToAuthority = new HashMap<String, String>();
         int code = start;
         for (Class<T> cls : entityClasses) {
             Entity annotation = cls.getAnnotation(Entity.class);

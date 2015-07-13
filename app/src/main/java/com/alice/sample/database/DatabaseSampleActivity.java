@@ -13,7 +13,6 @@ import com.alice.sample.R;
 import com.alice.sample.database.models.SubSubItem;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
@@ -42,6 +41,7 @@ public class DatabaseSampleActivity extends Activity{
     private SubSubItem oldestEntity = null;
 
     List<SubSubItem> subSubItemsList = new ArrayList<SubSubItem>(1000);
+    private int testCount = 1000;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,23 +53,21 @@ public class DatabaseSampleActivity extends Activity{
             @Override
             public void onClick(View v) {
 
-                int count = 1000;
                 long time = 0;
                 String id = "subSubItemId" + System.currentTimeMillis();
-                SubSubItem[] subSubItems = new SubSubItem[count];
-                for (int i = 0; i < count; i++) {
+                subSubItemsList.clear();
+                for (int i = 0; i < testCount; i++) {
                     SubSubItem subSubItem = new SubSubItem();
                     subSubItem.setId(id + i);
                     subSubItem.setSubSubItemData("Sub-sub-item-data");
-//                    oldestEntity = entityManager.save(subSubItem);
-                    subSubItems[i] = subSubItem;
-                    oldestEntity = subSubItem;
+                    subSubItemsList.add(subSubItem);
                 }
                 long start = System.currentTimeMillis();
-                entityManager.saveAll(Arrays.asList(subSubItems));
+                entityManager.saveAll(subSubItemsList);
+                oldestEntity = subSubItemsList.get(0);
                 long end = System.currentTimeMillis();
                 time += (end - start);
-                Toast.makeText(DatabaseSampleActivity.this, String.format("To save %d items were spent %d millis", count, time), Toast.LENGTH_SHORT).show();
+                Toast.makeText(DatabaseSampleActivity.this, String.format("To save %d items were spent %d millis", subSubItemsList.size(), time), Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -78,8 +76,9 @@ public class DatabaseSampleActivity extends Activity{
             public void onClick(View v) {
                 long start = System.currentTimeMillis();
                 List<SubSubItem> itemsList = entityManager.findAll(SubSubItem.class);
+                subSubItemsList.clear();
+                subSubItemsList.addAll(itemsList.subList(0, testCount));
                 long end = System.currentTimeMillis();
-                oldestEntity = itemsList.isEmpty() ? null : itemsList.get(0);
                 Toast.makeText(DatabaseSampleActivity.this, String.format("To read %d items were spent %d millis", itemsList.size(), (end - start)), Toast.LENGTH_SHORT).show();
             }
         });
@@ -88,18 +87,27 @@ public class DatabaseSampleActivity extends Activity{
             @Override
             public void onClick(View v) {
                 oldestEntity.setLongDate(new Date());
-                entityManager.update(oldestEntity);
+                for (SubSubItem subSubItem : subSubItemsList) {
+                    subSubItem.setSubSubItemData("Updated at: " + System.currentTimeMillis());
+                }
+                long start = System.currentTimeMillis();
+                entityManager.updateAll(subSubItemsList);
+                long end = System.currentTimeMillis();
+                Toast.makeText(DatabaseSampleActivity.this, String.format("To update %d items were spent %d millis", subSubItemsList.size(), (end - start)), Toast.LENGTH_SHORT).show();
             }
         });
 
         deleteDbBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (oldestEntity == null) {
-                    return;
+                int size = subSubItemsList.size();
+                long start = System.currentTimeMillis();
+                boolean deleted = entityManager.deleteAll(subSubItemsList);
+                long end = System.currentTimeMillis();
+                if (deleted) {
+                    subSubItemsList.clear();
                 }
-                entityManager.delete(oldestEntity);
-                oldestEntity = null;
+                Toast.makeText(DatabaseSampleActivity.this, String.format("To delete %d items were spent %d millis", size, (end - start)), Toast.LENGTH_SHORT).show();
             }
         });
     }

@@ -67,7 +67,7 @@ public abstract class AliceSingleItemTypeAdapter<T> extends AliceAbstractBinderA
     }
 
     private static Map<Integer, List<Integer>> createMap(Integer layoutId, List<Integer> ids) {
-        Map<Integer, List<Integer>> map = new HashMap<>();
+        Map<Integer, List<Integer>> map = new HashMap<Integer, List<Integer>>();
         map.put(layoutId, ids);
         return map;
     }

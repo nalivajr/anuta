@@ -62,7 +62,7 @@ public final class ReflectionTools {
      */
     public List<Field> getFieldsAnnotatedWith(Class<?> objetClass, Class<? extends Annotation> annotationClass) {
         Field[] all = objetClass.getDeclaredFields();
-        List<Field> fields = new ArrayList<>(all.length);
+        List<Field> fields = new ArrayList<Field>(all.length);
         for (Field field : all) {
             if (field.getAnnotation(annotationClass) != null) {
                 fields.add(field);

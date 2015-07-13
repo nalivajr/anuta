@@ -27,7 +27,7 @@ public class SampleProvider extends AliceRelationalProvider {
 
     @Override
     public <T> List<Class<T>> getEntityClasses() {
-        List<Class<T>> classes = new ArrayList<>();
+        List<Class<T>> classes = new ArrayList<Class<T>>();
         classes.add((Class<T>) SubSubItem.class);
         return classes;
     }

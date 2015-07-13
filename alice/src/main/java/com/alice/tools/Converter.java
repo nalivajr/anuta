@@ -50,7 +50,9 @@ class Converter {
         try {
             objectInputStream = new ObjectInputStream(byteArrayInputStream);
             return objectInputStream.readObject();
-        } catch (IOException | ClassNotFoundException e) {
+        } catch (IOException e) {
+            throw new ObjectDeserializationException(field);
+        } catch (ClassNotFoundException e) {
             throw new ObjectDeserializationException(field);
         }
     }

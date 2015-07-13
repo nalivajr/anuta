@@ -36,7 +36,7 @@ public class ColumnDescriptor {
             if (columnName.isEmpty()) {
                 columnName = field.getName();
             }
-            indexed = columnAnno.index();
+            indexed = columnAnno.index() || idAnno != null;
             columnPersistingDataTypeStrategy = columnAnno.dataType();
         }
         isIdColumn = idAnno != null;

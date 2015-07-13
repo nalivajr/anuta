@@ -181,7 +181,7 @@ public final class DatabaseTools {
 
 
     private <T> void validateFields(List<Field> columnFields, Class<T> cls) {
-        Set<String> columnNames = new HashSet<>();
+        Set<String> columnNames = new HashSet<String>();
         int ids = 0;
         for(Field field : columnFields) {
             Column columnAnno = field.getAnnotation(Column.class);
@@ -236,7 +236,7 @@ public final class DatabaseTools {
             throw new NotAnnotatedEntityException(cls);
         }
 
-        List<Field> resultList = new ArrayList<>();
+        List<Field> resultList = new ArrayList<Field>();
         resultList.addAll(Arrays.asList(cls.getDeclaredFields()));
 
         Class processing = cls;
@@ -631,7 +631,7 @@ public final class DatabaseTools {
 
     public List<EntityDescriptor> generateDescriptorsFor(List<Class<?>> classes) {
         validateEntityClasses(classes);
-        List<EntityDescriptor> result = new ArrayList<>(classes.size());
+        List<EntityDescriptor> result = new ArrayList<EntityDescriptor>(classes.size());
         for (Class<?> cls : classes) {
             EntityDescriptor entityDescriptor = new EntityDescriptor(cls);
             result.add(entityDescriptor);

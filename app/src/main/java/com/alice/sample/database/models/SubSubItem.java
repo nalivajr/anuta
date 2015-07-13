@@ -90,7 +90,7 @@ public class SubSubItem extends SubItem implements Identifiable<String> {
     private byte[] bytesVal = new byte[] {1, 0, 1, 0};
 
     @Column
-    private List<String> serialized = new ArrayList<>(Arrays.asList("Hello"));
+    private List<String> serialized = new ArrayList<String>(Arrays.asList("Hello"));
 
     @Column(dataType = Column.DataType.JSON_STRING)
     private String byteStr = "Bytes string";

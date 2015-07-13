@@ -20,7 +20,7 @@ public abstract class AliceDatabaseHelper extends SQLiteOpenHelper {
 
     private static final String TAG = AliceDatabaseHelper.class.getSimpleName();
 
-    private List<Class<Identifiable>> entityClasses = new LinkedList<>();
+    private List<Class<Identifiable>> entityClasses = new LinkedList<Class<Identifiable>>();
 
     public AliceDatabaseHelper(Context context, String name, SQLiteDatabase.CursorFactory factory, int version) {
         super(context, name, factory, version);

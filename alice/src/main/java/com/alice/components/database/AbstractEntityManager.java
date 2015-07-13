@@ -45,11 +45,11 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
         this.context = context;
         List<Class<?>> entityClasses = getEntityClasses();
         final List<EntityDescriptor> entityDescriptors = Alice.databaseTools.generateDescriptorsFor(entityClasses);
-        entityToDescriptor = new HashMap<>();
+        entityToDescriptor = new HashMap<Class<?>, EntityDescriptor>();
         for (EntityDescriptor descriptor : entityDescriptors) {
             entityToDescriptor.put(descriptor.getEntityClass(), descriptor);
         }
-        entitiesSet = new HashSet<>(entityClasses);
+        entitiesSet = new HashSet<Class<?>>(entityClasses);
     }
 
     /**
@@ -106,7 +106,7 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
         Cursor cursor = getContext().getContentResolver().query(uri, getProjectionWithRowId(entityClass), null, null, null);
         List<T> entities = convertCursorToEntities(entityClass, cursor, -1);
         if (entities == null) {
-            return new ArrayList<>();
+            return new ArrayList<T>();
         }
         return entities;
     }
@@ -144,7 +144,7 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
      * @return {@link ArrayList} of operations
      */
     protected <T> ArrayList<ContentProviderOperation> generateOperationsToSave(Uri uri, T entity) {
-        ArrayList<ContentProviderOperation> operations = new ArrayList<>();
+        ArrayList<ContentProviderOperation> operations = new ArrayList<ContentProviderOperation>();
         ContentProviderOperation.Builder operationBuilder = ContentProviderOperation.newInsert(uri);
         operationBuilder.withValues(convertToContentValues(entity));
         operations.add(operationBuilder.build());
@@ -175,7 +175,7 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
      * @return {@link ArrayList} of operations
      */
     protected <T> ArrayList<ContentProviderOperation> generateOperationsToUpdate(Uri uri, T entity) {
-        ArrayList<ContentProviderOperation> operations = new ArrayList<>();
+        ArrayList<ContentProviderOperation> operations = new ArrayList<ContentProviderOperation>();
         ContentProviderOperation.Builder operationBuilder = ContentProviderOperation.newUpdate(uri);
         operationBuilder.withValues(convertToContentValues(entity));
         String selection = getIdColumnName(entity.getClass()) + "=?";
@@ -217,10 +217,10 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
      *@param id entity's id  @return {@link ArrayList} of operations
      */
     protected ArrayList<ContentProviderOperation> generateOperationsToDelete(Uri uri, String idColumnName, String id) {
-        ArrayList<ContentProviderOperation> operations = new ArrayList<>();
+        ArrayList<ContentProviderOperation> operations = new ArrayList<ContentProviderOperation>();
         ContentProviderOperation.Builder operationBuilder = ContentProviderOperation.newDelete(uri);
         String selection = idColumnName + "=?";
-        String[] args = new String[]{getEntityId(id)};
+        String[] args = new String[]{id};
         operationBuilder.withSelection(selection, args);
         operations.add(operationBuilder.build());
         return operations;
@@ -235,7 +235,7 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
         Class<?> entityClass = checkAllEntitiesSameClass(entities);
         checkClassRegistered(entityClass);
         EntityDescriptor descriptor = entityToDescriptor.get(entityClass);
-        ArrayList<ContentProviderOperation> operations = new ArrayList<>(entities.size());
+        ArrayList<ContentProviderOperation> operations = new ArrayList<ContentProviderOperation>(entities.size());
         Uri tableUri = descriptor.getTableUri();
 
         Object[] entitiesArray = entities.toArray();
@@ -260,7 +260,9 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
         ContentProviderResult[] result;
         try {
             result = context.getContentResolver().applyBatch(authority, operations);
-        } catch (RemoteException | OperationApplicationException e) {
+        } catch (RemoteException e) {
+            throw new OperationExecutionException(e);
+        } catch (OperationApplicationException e) {
             throw new OperationExecutionException(e);
         }
         return result;
@@ -275,7 +277,7 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
         Class<?> entityClass = checkAllEntitiesSameClass(entities);
         checkClassRegistered(entityClass);
         EntityDescriptor descriptor = entityToDescriptor.get(entityClass);
-        ArrayList<ContentProviderOperation> operations = new ArrayList<>(entities.size());
+        ArrayList<ContentProviderOperation> operations = new ArrayList<ContentProviderOperation>(entities.size());
         Uri tableUri = descriptor.getTableUri();
 
         Object[] entitiesArray = entities.toArray();
@@ -295,7 +297,7 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
             return false;
         }
         Class<?> entityClass = checkAllEntitiesSameClass(entities);
-        List<String> ids = new ArrayList<>(entities.size());
+        List<String> ids = new ArrayList<String>(entities.size());
         for (T entity : entities) {
             ids.add(getEntityId(entity));
         }
@@ -306,7 +308,7 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
     public <T> boolean deleteAll(Class<T> entityClass, Collection<String> ids) {
         checkClassRegistered(entityClass);
         EntityDescriptor descriptor = entityToDescriptor.get(entityClass);
-        ArrayList<ContentProviderOperation> operations = new ArrayList<>(ids.size());
+        ArrayList<ContentProviderOperation> operations = new ArrayList<ContentProviderOperation>(ids.size());
         Uri tableUri = descriptor.getTableUri();
 
         //TODO: possibly correct variant of selection like 'WHERE id IN (?,?...?)' could be used, but leave this way as in future cascade deletion will be integrated

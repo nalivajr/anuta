@@ -109,7 +109,7 @@ public abstract class AliceAbstractAdapter<T> extends BaseAdapter {
         View view = inflater.inflate(layoutId, null);
         List<Integer> ids = typeToIdsMap.get(layoutId);
         if (ids != null) {
-            Map<Integer, View> views = new HashMap<>();
+            Map<Integer, View> views = new HashMap<Integer, View>();
             for (Integer id : ids) {
                 View subView = view.findViewById(id);
                 views.put(id, subView);
