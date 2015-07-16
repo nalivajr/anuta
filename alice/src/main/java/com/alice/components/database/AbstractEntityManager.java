@@ -15,6 +15,9 @@ import android.util.Log;
 
 import com.alice.components.database.models.EntityDescriptor;
 import com.alice.components.database.models.Persistable;
+import com.alice.components.database.query.AliceQuery;
+import com.alice.components.database.query.AliceQueryBuilder;
+import com.alice.components.database.query.BaseAliceQueryBuilder;
 import com.alice.exceptions.DifferentEntityClassesException;
 import com.alice.exceptions.NotRegisteredEntityClassUsedException;
 import com.alice.exceptions.OperationExecutionException;
@@ -98,17 +101,25 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
     }
 
     @Override
-    public <T> List<T> findAll(Class<T> entityClass) {
+    public <T> List<T> findByQuery(AliceQuery<T> query) {
+        Class<T> entityClass = query.getTargetClass();
         checkClassRegistered(entityClass);
 
         Uri uri = getUri(entityClass);
+        String selection = query.getSelection();
+        String[] args = query.getSelectionArgs();
 
-        Cursor cursor = getContext().getContentResolver().query(uri, getProjectionWithRowId(entityClass), null, null, null);
+        Cursor cursor = getContext().getContentResolver().query(uri, getProjectionWithRowId(entityClass), selection, args, null);
         List<T> entities = convertCursorToEntities(entityClass, cursor, -1);
         if (entities == null) {
             return new ArrayList<T>();
         }
         return entities;
+    }
+
+    @Override
+    public <T> List<T> findAll(Class<T> entityClass) {
+        return findByQuery(getQueryBuilder(entityClass).buildFindAllQuery());
     }
 
     @Override
@@ -394,5 +405,9 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
 
     protected Context getContext() {
         return context;
+    }
+
+    public <T> AliceQueryBuilder<T> getQueryBuilder(Class<T> cls) {
+        return new BaseAliceQueryBuilder<T>(cls);
     }
 }

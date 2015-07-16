@@ -2,6 +2,7 @@ package com.alice.sample.database;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.provider.BaseColumns;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
@@ -9,6 +10,9 @@ import android.widget.Toast;
 import com.alice.annonatations.ui.AutoActivity;
 import com.alice.annonatations.ui.InnerView;
 import com.alice.components.database.AliceEntityManager;
+import com.alice.components.database.query.AliceQuery;
+import com.alice.components.database.query.AliceQueryBuilder;
+import com.alice.components.database.query.Restriction;
 import com.alice.sample.R;
 import com.alice.sample.database.models.SubSubItem;
 
@@ -74,10 +78,19 @@ public class DatabaseSampleActivity extends Activity{
         findDbBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                AliceQueryBuilder<SubSubItem> builder = entityManager.getQueryBuilder(SubSubItem.class);
+                Restriction restriction = builder.notEqual(BaseColumns._ID, "51");
+                Restriction restriction3 = builder.notIn(BaseColumns._ID, new String[]{"52", "53"});
+                AliceQuery<SubSubItem> query = builder
+                        .and(restriction)
+                        .and(restriction3).build();
+
+
                 long start = System.currentTimeMillis();
-                List<SubSubItem> itemsList = entityManager.findAll(SubSubItem.class);
+                List<SubSubItem> itemsList = entityManager.findByQuery(query);
                 subSubItemsList.clear();
-                subSubItemsList.addAll(itemsList.subList(0, testCount));
+                int size = itemsList.size() > testCount ? testCount : itemsList.size();
+                subSubItemsList.addAll(itemsList.subList(0, size));
                 long end = System.currentTimeMillis();
                 Toast.makeText(DatabaseSampleActivity.this, String.format("To read %d items were spent %d millis", itemsList.size(), (end - start)), Toast.LENGTH_SHORT).show();
             }

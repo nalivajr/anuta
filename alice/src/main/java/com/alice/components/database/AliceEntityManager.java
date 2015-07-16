@@ -1,5 +1,8 @@
 package com.alice.components.database;
 
+import com.alice.components.database.query.AliceQuery;
+import com.alice.components.database.query.AliceQueryBuilder;
+
 import java.util.Collection;
 import java.util.List;
 
@@ -58,6 +61,13 @@ public interface AliceEntityManager {
     public <T> List<T> findAll(Class<T> entityClass);
 
     /**
+     * Finds all entities of the given type
+     * @param <T> the type if target entity
+     * @return list of found entities or empty list if nothing was found
+     */
+    public <T> List<T> findByQuery(AliceQuery<T> query);
+
+    /**
      * Saves all entities into database
      * @param <T> the type if target entity
      * @return collection of saved entities
@@ -85,4 +95,9 @@ public interface AliceEntityManager {
      * @return collection of updated entities
      */
     public <T> boolean deleteAll(Class<T> entityClass, Collection<String> ids);
+
+    /**
+     * @return the instance of {@link AliceQueryBuilder} which can be used to build query
+     */
+    public <T> AliceQueryBuilder<T> getQueryBuilder(Class<T> cls);
 }

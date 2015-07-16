@@ -4,11 +4,8 @@ import android.provider.BaseColumns;
 
 import com.alice.annonatations.database.Column;
 import com.alice.annonatations.database.Entity;
-import com.alice.annonatations.database.EntityCollection;
 import com.alice.annonatations.database.Id;
 import com.alice.components.database.models.Persistable;
-
-import java.util.List;
 
 /**
  * Created by Sergey Nalivko.
@@ -27,9 +24,6 @@ public class Item implements Persistable<String> {
 
     @Column
     private String itemData  = "item-data";
-
-    @EntityCollection
-    private List<SubSubItem> subSubItems;
 
     @Override
     public String getId() {
