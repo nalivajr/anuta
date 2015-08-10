@@ -26,6 +26,7 @@ import com.alice.tools.Alice;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -124,26 +125,7 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
 
     @Override
     public <T> T save(T entity) {
-        if (entity == null) {
-            throw new RuntimeException("Attempt to save null entity");
-        }
-        Class<?> entityClass = entity.getClass();
-        checkClassRegistered(entityClass);
-        EntityDescriptor descriptor = entityToDescriptor.get(entityClass);
-        Uri tableUri = descriptor.getTableUri();
-        ArrayList<ContentProviderOperation> operations = generateOperationsToSave(tableUri, entity);
-
-        String tableUriStr = tableUri.toString();
-
-        long prevId = -1;
-        ContentProviderResult[] results = applyOperations(operations, descriptor.getAuthority());
-        for (ContentProviderResult result : results) {
-            long id = ContentUris.parseId(result.uri);
-            if (result.uri.toString().contains(tableUriStr) && (prevId != id)) {
-                setEntityRowId(entity, id);
-                prevId = id;
-            }
-        }
+        saveAll(Collections.singletonList(entity));
         return entity;
     }
 
@@ -164,17 +146,7 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
 
     @Override
     public <T> T update(T entity) {
-        if (entity == null) {
-            throw new RuntimeException("Attempt to update null entity");
-        }
-
-        Class<?> entityClass = entity.getClass();
-        checkClassRegistered(entityClass);
-        EntityDescriptor descriptor = entityToDescriptor.get(entityClass);
-        Uri tableUri = descriptor.getTableUri();
-        ArrayList<ContentProviderOperation> operations = generateOperationsToUpdate(tableUri, entity);
-        applyOperations(operations, descriptor.getAuthority());
-
+        updateAll(Collections.singletonList(entity));
         return entity;
     }
 
@@ -202,7 +174,6 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
             Log.w(TAG, "Attempt to delete null entity");
             return false;
         }
-        checkClassRegistered(entity.getClass());
         String strId = getEntityId(entity);
         return delete(entity.getClass(), strId);
     }

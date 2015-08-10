@@ -84,6 +84,15 @@ public @interface Column {
          * string
          * </li>
          * <li>
+         *     If field type is {@link java.util.Date} that it will be stored as long
+         * </li>
+         * <li>
+         *     If field type is enum type that it will be stored as TEXT (enum constant name)
+         * </li>
+         * <li>
+         *     If field type is byte array that it will be stored as BLOB
+         * </li>
+         * <li>
          *     If field type is {@link String} that it will be stored as TEXT
          * </li>
          * <li>

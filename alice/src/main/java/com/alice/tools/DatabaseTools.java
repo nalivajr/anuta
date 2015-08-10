@@ -101,7 +101,6 @@ public final class DatabaseTools {
         StringBuilder builder = new StringBuilder();
         builder.append(String.format("CREATE TABLE %s (", tableName));
         List<Field> columnFields = extractFields(cls);
-        validateFields(columnFields, cls);
 
         for (Field field : columnFields) {
             String columnScript = buildColumnDefinition(field);
@@ -133,7 +132,6 @@ public final class DatabaseTools {
         StringBuilder builder = new StringBuilder();
         builder.append(String.format("CREATE TABLE %s (", tableName));
         List<Field> columnFields = extractFields(cls);
-        validateFields(columnFields, cls);
 
         for (Field field : columnFields) {
             boolean index;
@@ -439,7 +437,7 @@ public final class DatabaseTools {
                 if (cls.isPrimitive() || Number.class.isAssignableFrom(cls)) {
                     return val;
                 }
-                if (cls == byte[].class) {     //ENUM_STRING
+                if (cls == byte[].class) {
                     return val;
                 }
                 if (cls.isEnum()) {     //ENUM_STRING
