@@ -4,6 +4,8 @@ import android.database.ContentObserver;
 import android.database.Cursor;
 import android.database.DataSetObserver;
 
+import java.util.NoSuchElementException;
+
 /**
  * Created by Sergey Nalivko.
  * email: snalivko93@gmail.com
@@ -22,7 +24,31 @@ public abstract class AliceBaseEntityCursor<T> implements AliceEntityCursor<T> {
      * @param cursor source cursor
      * @return converted entity
      */
-    public abstract T convert(Cursor cursor);
+    protected abstract T convert(Cursor cursor);
+
+    @Override
+    public boolean hasNext() {
+        return getCount() > getPosition();
+    }
+
+    @Override
+    public T next() {
+        if (isLast() || !moveToNext()) {
+            throw new NoSuchElementException("There are no more elements in cursor");
+        }
+        // as we have already moved, then return current
+        return getCurrent();
+    }
+
+    @Override
+    public T getCurrent() {
+        return convert(cursor);
+    }
+
+    @Override
+    public void remove() {
+        throw new UnsupportedOperationException("Could not remove entity. Operation is not supported by " + AliceBaseEntityCursor.class.getName());
+    }
 
     @Override
     public int getCount() {

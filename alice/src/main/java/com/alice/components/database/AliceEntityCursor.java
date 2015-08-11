@@ -4,11 +4,26 @@ import android.database.ContentObserver;
 import android.database.Cursor;
 import android.database.DataSetObserver;
 
+import java.util.Iterator;
+
 /**
  * Created by Sergey Nalivko.
  * email: snalivko93@gmail.com
  */
-public interface AliceEntityCursor<T> {
+public interface AliceEntityCursor<T> extends Iterator<T> {
+
+
+    boolean hasNext();
+    /**
+     * @return an entity at position next to current
+     * @throws java.util.NoSuchElementException if there are no any entities avalable
+     */
+    T next();
+
+    /**
+     * @return an entity an current position
+     */
+    T getCurrent();
 
     /**
      * @see Cursor#getCount()

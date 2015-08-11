@@ -104,13 +104,8 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
     @Override
     public <T> List<T> findByQuery(AliceQuery<T> query) {
         Class<T> entityClass = query.getTargetClass();
-        checkClassRegistered(entityClass);
 
-        Uri uri = getUri(entityClass);
-        String selection = query.getSelection();
-        String[] args = query.getSelectionArgs();
-
-        Cursor cursor = getContext().getContentResolver().query(uri, getProjectionWithRowId(entityClass), selection, args, null);
+        Cursor cursor = getCursorByQuery(query);
         List<T> entities = convertCursorToEntities(entityClass, cursor, -1);
         if (entities == null) {
             return new ArrayList<T>();
@@ -301,6 +296,29 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
         String authority = descriptor.getAuthority();
         applyOperations(operations, authority);
         return true;
+    }
+
+    @Override
+    public <T> AliceEntityCursor<T> getEntityCursor(final AliceQuery<T> query) {
+        Cursor cursor = getCursorByQuery(query);
+
+        return new AliceBaseEntityCursor<T>(cursor) {
+            @Override
+            protected T convert(Cursor cursor) {
+                return convertCursorToEntities(query.getTargetClass(), cursor, 1).get(0);
+            }
+        };
+    }
+
+    protected <T> Cursor getCursorByQuery(AliceQuery<T> query) {
+        final Class<T> entityClass = query.getTargetClass();
+        checkClassRegistered(entityClass);
+
+        Uri uri = getUri(entityClass);
+        String selection = query.getSelection();
+        String[] args = query.getSelectionArgs();
+
+        return getContext().getContentResolver().query(uri, getProjectionWithRowId(entityClass), selection, args, null);
     }
 
     @Nullable

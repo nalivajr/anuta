@@ -100,4 +100,12 @@ public interface AliceEntityManager {
      * @return the instance of {@link AliceQueryBuilder} which can be used to build query
      */
     public <T> AliceQueryBuilder<T> getQueryBuilder(Class<T> cls);
+
+    /**
+     * Queries data from DB and coverts data from cursor to Java entity.
+     * @param query the query to select objects
+     * @param <T> type of target entity
+     * @return an instance of {@link AliceEntityCursor} which can be used to iterate objects from database
+     */
+    public <T> AliceEntityCursor<T> getEntityCursor(AliceQuery<T> query);
 }
