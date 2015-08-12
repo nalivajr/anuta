@@ -2,6 +2,8 @@ package com.alice.sample.database;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.BaseColumns;
 import android.view.View;
 import android.widget.Button;
@@ -9,7 +11,9 @@ import android.widget.Toast;
 
 import com.alice.annonatations.ui.AutoActivity;
 import com.alice.annonatations.ui.InnerView;
+import com.alice.callbacks.database.ActionCallback;
 import com.alice.components.database.AliceEntityManager;
+import com.alice.components.database.EntityManagerAsyncWrapper;
 import com.alice.components.database.query.AliceQuery;
 import com.alice.components.database.query.AliceQueryBuilder;
 import com.alice.components.database.query.Restriction;
@@ -86,13 +90,37 @@ public class DatabaseSampleActivity extends Activity{
                         .and(restriction3).build();
 
 
-                long start = System.currentTimeMillis();
-                List<SubSubItem> itemsList = entityManager.findByQuery(query);
-                subSubItemsList.clear();
-                int size = itemsList.size() > testCount ? testCount : itemsList.size();
-                subSubItemsList.addAll(itemsList.subList(0, size));
-                long end = System.currentTimeMillis();
-                Toast.makeText(DatabaseSampleActivity.this, String.format("To read %d items were spent %d millis", itemsList.size(), (end - start)), Toast.LENGTH_SHORT).show();
+                EntityManagerAsyncWrapper asyncEntityManager = new EntityManagerAsyncWrapper(entityManager);
+                final long start = System.currentTimeMillis();
+
+                asyncEntityManager.findByQuery(query, new ActionCallback<List<SubSubItem>>() {
+                    @Override
+                    public void onSuccess(final List<SubSubItem> result) {
+                        subSubItemsList.clear();
+                        int size = result.size() > testCount ? testCount : result.size();
+                        subSubItemsList.addAll(result.subList(0, size));
+                        final long end = System.currentTimeMillis();
+
+                        new Handler(Looper.getMainLooper()).post(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(DatabaseSampleActivity.this, String.format("To read %d items were spent %d millis", result.size(), (end - start)), Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onFailed(final Throwable e) {
+                        new Handler(Looper.getMainLooper()).post(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(DatabaseSampleActivity.this, "An error during query: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                });
+
+
             }
         });
 
