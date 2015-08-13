@@ -2,7 +2,7 @@ package com.alice.sample.database;
 
 import android.content.Context;
 
-import com.alice.components.database.AliceRelationalEntityManager;
+import com.alice.components.database.entitymanager.AliceRelationalEntityManager;
 import com.alice.sample.database.models.SubSubItem;
 
 import java.util.ArrayList;

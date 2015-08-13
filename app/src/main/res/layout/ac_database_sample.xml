@@ -1,30 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              android:orientation="vertical"
+              android:orientation="horizontal"
               android:layout_width="match_parent"
-              android:layout_height="match_parent">
+              android:layout_height="match_parent"
+              android:weightSum="2">
 
-    <Button
-        android:id="@+id/btn_save_db"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Save"/>
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical">
+        <Button
+            android:id="@+id/btn_save_db"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Save"/>
 
-    <Button
-        android:id="@+id/btn_find_db"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Find"/>
+        <Button
+            android:id="@+id/btn_find_db"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Find"/>
 
-    <Button
-        android:id="@+id/btn_update_db"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Update"/>
+        <Button
+            android:id="@+id/btn_update_db"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Update"/>
 
-    <Button
-        android:id="@+id/btn_delete_db"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Delete"/>
+        <Button
+            android:id="@+id/btn_delete_db"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Delete"/>
+    </LinearLayout>
+
+    <ListView
+        android:id="@+id/lv_cursor_adapter_sample"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1">
+    </ListView>
 </LinearLayout>

@@ -7,18 +7,25 @@ import android.os.Looper;
 import android.provider.BaseColumns;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.alice.annonatations.ui.AutoActivity;
 import com.alice.annonatations.ui.InnerView;
 import com.alice.callbacks.database.ActionCallback;
-import com.alice.components.database.AliceEntityManager;
-import com.alice.components.database.EntityManagerAsyncWrapper;
+import com.alice.components.adapters.AliceAbstractAdapter;
+import com.alice.components.adapters.data.binder.DataBinder;
+import com.alice.components.database.cursor.AliceEntityCursor;
+import com.alice.components.database.entitymanager.AliceEntityManager;
+import com.alice.components.database.entitymanager.EntityManagerAsyncWrapper;
 import com.alice.components.database.query.AliceQuery;
 import com.alice.components.database.query.AliceQueryBuilder;
+import com.alice.components.database.query.BaseAliceQueryBuilder;
 import com.alice.components.database.query.Restriction;
 import com.alice.sample.R;
 import com.alice.sample.database.models.SubSubItem;
+import com.alice.tools.Alice;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -44,19 +51,44 @@ public class DatabaseSampleActivity extends Activity{
     @InnerView(R.id.btn_delete_db)
     private Button deleteDbBtn;
 
+    @InnerView(R.id.lv_cursor_adapter_sample)
+    private ListView listView;
+
     private AliceEntityManager entityManager;
 
     private SubSubItem oldestEntity = null;
 
-    List<SubSubItem> subSubItemsList = new ArrayList<SubSubItem>(1000);
-    private int testCount = 1000;
+    private int testCount = 10;
+    private List<SubSubItem> subSubItemsList = new ArrayList<SubSubItem>(testCount);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         entityManager = new SampleEntityManager(DatabaseSampleActivity.this);
+        initListView();
 
+        initListeners();
+    }
+
+    private void initListView() {
+        AliceQuery<SubSubItem> query = new BaseAliceQueryBuilder<SubSubItem>(SubSubItem.class).buildFindAllQuery();
+        DataBinder<SubSubItem> dataBinder = new DataBinder<SubSubItem>() {
+            @Override
+            public void bindView(View view, int itemLayoutId, Integer viewId, SubSubItem item) {
+                if (viewId == R.id.tv_cursor_adapter_item_id) {
+                    ((TextView) view).setText(String.valueOf(item.getRowId()));
+                }
+                if (viewId == R.id.tv_cursor_adapter_item_data) {
+                    ((TextView) view).setText(String.valueOf(item.getSubSubItemData()));
+                }
+            }
+        };
+        AliceAbstractAdapter<SubSubItem> adapter = Alice.adapterTools.buildAdapter(this, dataBinder, R.layout.layout_alice_cursor_adapter_item, query);
+        listView.setAdapter(adapter);
+    }
+
+    private void initListeners() {
         saveDbBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -91,6 +123,12 @@ public class DatabaseSampleActivity extends Activity{
 
 
                 EntityManagerAsyncWrapper asyncEntityManager = new EntityManagerAsyncWrapper(entityManager);
+
+                final long cStart = System.currentTimeMillis();
+                AliceEntityCursor<SubSubItem> cursor = entityManager.getEntityCursor(query);
+                final long cEnd = System.currentTimeMillis();
+                Toast.makeText(DatabaseSampleActivity.this, String.format("To read %d items were spent %d millis", cursor.getCount(), (cEnd - cStart)), Toast.LENGTH_SHORT).show();
+
                 final long start = System.currentTimeMillis();
 
                 asyncEntityManager.findByQuery(query, new ActionCallback<List<SubSubItem>>() {
@@ -119,8 +157,6 @@ public class DatabaseSampleActivity extends Activity{
                         });
                     }
                 });
-
-
             }
         });
 

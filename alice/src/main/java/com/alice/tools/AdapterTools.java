@@ -3,13 +3,28 @@ package com.alice.tools;
 import android.content.Context;
 import android.content.res.Resources;
 import android.content.res.XmlResourceParser;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
+import android.view.View;
+
+import com.alice.components.adapters.AliceAbstractAdapter;
+import com.alice.components.adapters.AliceDataProvidedSingleViewAdapter;
+import com.alice.components.adapters.data.binder.DataBinder;
+import com.alice.components.adapters.data.provider.CursorDataProvider;
+import com.alice.components.adapters.data.provider.DataProvider;
+import com.alice.components.database.cursor.AliceEntityCursor;
+import com.alice.components.database.entitymanager.AliceEntityManager;
+import com.alice.components.database.entitymanager.AliceRelationalEntityManager;
+import com.alice.components.database.query.AliceQuery;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -87,5 +102,186 @@ public final class AdapterTools {
             }
             break;
         }
+    }
+
+    /**
+     * Creates instance of {@link DataProvider} based on item's collection
+     * @param items source items collection
+     * @return created instance
+     */
+    public <T> DataProvider<T> createProvider(final Collection<T> items) {
+        return new DataProvider<T>() {
+
+            private List<T> itemsList = new ArrayList<T>(items);
+
+            @Override
+            public int count() {
+                return itemsList.size();
+            }
+
+            @Override
+            public T getItem(int position) {
+                if (position < itemsList.size()) {
+                    return itemsList.get(position);
+                }
+                throw new IndexOutOfBoundsException("Index is greater then items count in provider");
+            }
+        };
+    }
+
+    /**
+     * Creates instance of {@link DataProvider} based on item's collection
+     * @param items source items collection
+     * @return created instance
+     */
+    public <T> DataProvider<T> createProvider(final T ... items) {
+        return new DataProvider<T>() {
+
+            private List<T> itemsList = Arrays.asList(items);
+
+            @Override
+            public int count() {
+                return itemsList.size();
+            }
+
+            @Override
+            public T getItem(int position) {
+                if (position < itemsList.size()) {
+                    return itemsList.get(position);
+                }
+                throw new IndexOutOfBoundsException("Index is greater then items count in provider");
+            }
+        };
+    }
+
+    /**
+     * Creates instance of {@link DataProvider} based on item's collection
+     * @param cursor source items cursor
+     * @param dataUpdatedAction the callback which will be invoked when data updated
+     * @return created instance
+     */
+    public <T> DataProvider<T> createProvider(final AliceEntityCursor<T> cursor, final Runnable dataUpdatedAction) {
+        return new CursorDataProvider<T>(cursor) {
+            @Override
+            protected void onDataUpdated() {
+                if (dataUpdatedAction != null) {
+                    dataUpdatedAction.run();
+                }
+            }
+        };
+    }
+
+    /**
+     * Creates instance of {@link DataProvider} based on item's collection
+     * Be aware that this is potentially heavy operation to be run in main thread
+     * @param context the context of provider usage
+     * @param query the query for items
+     * @param dataUpdatedAction the callback which will be invoked when data updated
+     * @return created instance
+     */
+    public <T> DataProvider<T> createProvider(Context context, AliceQuery<T> query, Runnable dataUpdatedAction) {
+
+        final List<Class<?>> entityClasses = new ArrayList<>(1);
+        entityClasses.add(query.getTargetClass());
+
+        AliceEntityManager entityManager = new AliceRelationalEntityManager(context) {
+            @Override
+            protected List<Class<?>> getEntityClasses() {
+                return entityClasses;
+            }
+        };
+        return createProvider(entityManager.getEntityCursor(query), dataUpdatedAction);
+    }
+
+    /**
+     * Creates an instance of {@link AliceDataProvidedSingleViewAdapter} using {@link DataBinder}, {@link DataProvider} and layoutId
+     * @param context the context where adapter will be used
+     * @param provider the instance of data provider
+     * @param binder the instance of data binder
+     * @param layoutId the id of layout which will be used to present data
+     * @return created instance
+     */
+    public <T> AliceAbstractAdapter<T> buildAdapter(Context context, DataProvider<T> provider, final DataBinder<T> binder, final int layoutId) {
+        return new AliceDataProvidedSingleViewAdapter<T>(context, layoutId, provider) {
+
+            @Override
+            protected void bindView(View view, Integer viewId, T item) {
+                binder.bindView(view, layoutId, viewId, item);
+            }
+        };
+    }
+
+    /**
+     * Creates an instance of {@link AliceDataProvidedSingleViewAdapter} using {@link DataBinder}, {@link DataProvider} and layoutId
+     * @param context the context where adapter will be used
+     * @param items the items to be presented
+     * @param binder the instance of data binder
+     * @param layoutId the id of layout which will be used to present data
+     * @return created instance
+     */
+    public <T> AliceAbstractAdapter<T> buildAdapter(Context context, final DataBinder<T> binder, final int layoutId, Collection<T> items) {
+        return new AliceDataProvidedSingleViewAdapter<T>(context, layoutId, createProvider(items)) {
+            @Override
+            protected void bindView(View view, Integer viewId, T item) {
+                binder.bindView(view, layoutId, viewId, item);
+            }
+        };
+    }
+
+    /**
+     * Creates an instance of {@link AliceDataProvidedSingleViewAdapter} using {@link DataBinder}, {@link DataProvider} and layoutId
+     * @param context the context where adapter will be used
+     * @param items the items to be presented
+     * @param binder the instance of data binder
+     * @param layoutId the id of layout which will be used to present data
+     * @return created instance
+     */
+    public <T> AliceAbstractAdapter<T> buildAdapter(Context context, final DataBinder<T> binder, final int layoutId, T ... items) {
+        return new AliceDataProvidedSingleViewAdapter<T>(context, layoutId, createProvider(items)) {
+            @Override
+            protected void bindView(View view, Integer viewId, T item) {
+                binder.bindView(view, layoutId, viewId, item);
+            }
+        };
+    }
+
+    /**
+     * Creates an instance of {@link AliceDataProvidedSingleViewAdapter} using {@link DataBinder}, {@link DataProvider} and layoutId
+     * Be aware that this is potentially heavy operation to be run in main thread
+     * @param context the context where adapter will be used
+     * @param binder the instance of data binder
+     * @param layoutId the id of layout which will be used to present data
+     * @return created instance
+     */
+    public <T> AliceAbstractAdapter<T> buildAdapter(Context context, final DataBinder<T> binder, final int layoutId, AliceQuery<T> query) {
+        class AdapterWrapper {
+            private AliceAbstractAdapter<T> adapter;
+        }
+
+        final AdapterWrapper wrapper = new AdapterWrapper();
+        Runnable callback = new Runnable() {
+
+            private Handler uiHandler = new Handler(Looper.getMainLooper());
+
+            @Override
+            public void run() {
+                uiHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        wrapper.adapter.notifyDataSetChanged();
+                    }
+                });
+            }
+        };
+
+        DataProvider<T> dataProvider = createProvider(context, query, callback);
+        wrapper.adapter = new AliceDataProvidedSingleViewAdapter<T>(context, layoutId, dataProvider) {
+            @Override
+            protected void bindView(View view, Integer viewId, T item) {
+                binder.bindView(view, layoutId, viewId, item);
+            }
+        };
+
+        return wrapper.adapter;
     }
 }

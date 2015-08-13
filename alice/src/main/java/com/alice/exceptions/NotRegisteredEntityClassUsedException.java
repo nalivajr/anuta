@@ -1,6 +1,6 @@
 package com.alice.exceptions;
 
-import com.alice.components.database.AliceEntityManager;
+import com.alice.components.database.entitymanager.AliceEntityManager;
 
 /**
  * Created by Sergey Nalivko.

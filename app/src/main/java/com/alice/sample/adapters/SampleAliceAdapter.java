@@ -9,6 +9,7 @@ import com.alice.components.adapters.AliceAbstractAdapter;
 import com.alice.sample.R;
 import com.alice.sample.models.Person;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -19,10 +20,12 @@ import java.util.Map;
 public class SampleAliceAdapter extends AliceAbstractAdapter<Person> {
 
     private Context context;
+    private List<Person> items;
 
     public SampleAliceAdapter(Context context, List<Person> items, Map<Integer, List<Integer>> layoutIdToSubViewsIdsMap) {
-        super(context, items, layoutIdToSubViewsIdsMap);
+        super(context, layoutIdToSubViewsIdsMap);
         this.context = context;
+        this.items = new ArrayList<Person>(items);
     }
 
     @Override
@@ -32,6 +35,16 @@ public class SampleAliceAdapter extends AliceAbstractAdapter<Person> {
         } else {
             return R.layout.alice_adapter_item_right;
         }
+    }
+
+    @Override
+    public Person getItem(int position) {
+        return items.get(position);
+    }
+
+    @Override
+    public int getCount() {
+        return items.size();
     }
 
     @Override

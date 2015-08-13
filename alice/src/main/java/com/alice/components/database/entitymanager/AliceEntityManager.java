@@ -1,5 +1,6 @@
-package com.alice.components.database;
+package com.alice.components.database.entitymanager;
 
+import com.alice.components.database.cursor.AliceEntityCursor;
 import com.alice.components.database.query.AliceQuery;
 import com.alice.components.database.query.AliceQueryBuilder;
 

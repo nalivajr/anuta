@@ -1,4 +1,4 @@
-package com.alice.components.adapters;
+package com.alice.components.adapters.data.binder;
 
 import android.view.View;
 
@@ -8,7 +8,7 @@ import android.view.View;
  */
 public interface DataBinder<T> {
     /**
-     * Binds data to a separate view.
+     * Binds data to the given view.
      * @param view the view to be updated
      * @param itemLayoutId the id of layout for the given {@code item}
      * @param viewId the id of view

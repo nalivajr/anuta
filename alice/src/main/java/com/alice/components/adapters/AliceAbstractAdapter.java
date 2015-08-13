@@ -6,8 +6,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,45 +16,23 @@ import java.util.Map;
  */
 public abstract class AliceAbstractAdapter<T> extends BaseAdapter {
 
-    private List<T> items = new ArrayList<T>();
     private LayoutInflater inflater;
     private Map<Integer, List<Integer>> typeToIdsMap = new HashMap<Integer, List<Integer>>();
 
     /**
      * Creates instance of {@link AliceAbstractAdapter}
      * @param context the context
-     * @param items list of items, which should be presented with this adapter
      * @param layoutIdToSubViewsIdsMap the map, which contains the resource id of layout for item
      *                                 and list of ids of sub views which are used to present particular property
      *                                 of model object
      */
-    public AliceAbstractAdapter(Context context, List<T> items, Map<Integer, List<Integer>> layoutIdToSubViewsIdsMap) {
-        if (items != null) {
-            this.items.addAll(items);
-        }
+    public AliceAbstractAdapter(Context context, Map<Integer, List<Integer>> layoutIdToSubViewsIdsMap) {
         if (layoutIdToSubViewsIdsMap != null) {
             this.typeToIdsMap.putAll(layoutIdToSubViewsIdsMap);
         }
         inflater = LayoutInflater.from(context);
     }
 
-    /**
-     * Creates instance of {@link AliceAbstractAdapter}
-     * @param context the context
-     * @param items set of items, which should be presented with this adapter
-     * @param layoutIdToSubViewsIdsMap the map, which contains the resource id of layout for item
-     *                                 and list of ids of sub views which are used to present particular property
-     *                                 of model object
-     */
-    public AliceAbstractAdapter(Context context, Map<Integer, List<Integer>> layoutIdToSubViewsIdsMap, T... items) {
-        if (items != null) {
-            this.items.addAll(Arrays.asList(items));
-        }
-        if (layoutIdToSubViewsIdsMap != null) {
-            this.typeToIdsMap.putAll(layoutIdToSubViewsIdsMap);
-        }
-        inflater = LayoutInflater.from(context);
-    }
 
     /**
      * Returns the layout resource id, which should be used to present item
@@ -81,18 +57,11 @@ public abstract class AliceAbstractAdapter<T> extends BaseAdapter {
     public abstract int getViewTypeCount();
 
     @Override
-    public T getItem(int position) {
-        return items.get(position);
-    }
+    public abstract T getItem(int position);
 
     @Override
     public long getItemId(int position) {
         return position;
-    }
-
-    @Override
-    public int getCount() {
-        return items.size();
     }
 
     @Override

@@ -96,6 +96,7 @@ public abstract class AliceContentProvider extends ContentProvider {
                 .authority(tableNameToAuthority.get(tableName))
                 .appendPath(tableName)
                 .build();
+        notifyObservers(uri);
         return ContentUris.withAppendedId(newUri, rowId);
     }
 
@@ -120,6 +121,7 @@ public abstract class AliceContentProvider extends ContentProvider {
         } finally {
             database.endTransaction();
         }
+        notifyObservers(uri);
         return deleted;
     }
 
@@ -143,6 +145,7 @@ public abstract class AliceContentProvider extends ContentProvider {
         } finally {
             database.endTransaction();
         }
+        notifyObservers(uri);
         return updated;
     }
 
@@ -181,5 +184,9 @@ public abstract class AliceContentProvider extends ContentProvider {
             tableNameToAuthority.put(tableName, authority);
             code = (code / step + 1) * step;
         }
+    }
+
+    protected void notifyObservers(Uri uri) {
+        getContext().getContentResolver().notifyChange(uri, null);
     }
 }

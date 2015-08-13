@@ -1,4 +1,4 @@
-package com.alice.components.database;
+package com.alice.components.database.entitymanager;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -38,7 +38,7 @@ public abstract class AliceRelationalEntityManager extends AbstractEntityManager
     }
 
     @Override
-    protected <T> List<T> convertCursorToEntities(Class<T> entityClass, Cursor cursor, int count) {
+    protected <T> List<T> convertCursorToEntities(Class<T> entityClass, Cursor cursor, int count, boolean closeAfter) {
         List<T> entities = count > 0 ? new ArrayList<T>(count) : new LinkedList<T>();
         Collection<ColumnDescriptor> columns = entityToDescriptor.get(entityClass).getFieldDescriptors();
         try {
@@ -48,7 +48,8 @@ public abstract class AliceRelationalEntityManager extends AbstractEntityManager
             boolean isCursorReady = true;
             int readLeft = count;
             while ((readLeft > 0 || count == -1) && isCursorReady) {
-                entities.add(cursorToEntity(entityClass, cursor, columns));
+                T entity = cursorToEntity(entityClass, cursor, columns);
+                entities.add(entity);
                 isCursorReady = cursor.moveToNext();
                 readLeft--;
             }
@@ -56,11 +57,22 @@ public abstract class AliceRelationalEntityManager extends AbstractEntityManager
             Log.e(TAG, String.format("Error during converting cursor to %s", entityClass.getName()), e);
             throw new RuntimeException(e);
         } finally {
-            if (cursor != null) {
+            if (cursor != null && closeAfter) {
                 cursor.close();
             }
         }
         return entities;
+    }
+
+    @Override
+    protected <T> T cursorToEntity(Class<T> entityClass, Cursor cursor) {
+        Collection<ColumnDescriptor> columns = entityToDescriptor.get(entityClass).getFieldDescriptors();
+        try {
+            return cursorToEntity(entityClass, cursor, columns);
+        } catch (Throwable e) {
+            Log.w(TAG, "Cold not convert cursor to entity", e);
+        }
+        return null;
     }
 
     private <T> T cursorToEntity(Class<T> entityClass, Cursor cursor, Collection<ColumnDescriptor> columns) {

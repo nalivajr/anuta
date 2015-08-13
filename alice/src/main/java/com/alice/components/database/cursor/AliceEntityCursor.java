@@ -1,8 +1,11 @@
-package com.alice.components.database;
+package com.alice.components.database.cursor;
 
+import android.content.ContentResolver;
 import android.database.ContentObserver;
 import android.database.Cursor;
 import android.database.DataSetObserver;
+
+import com.alice.callbacks.database.ActionCallback;
 
 import java.util.Iterator;
 
@@ -24,6 +27,11 @@ public interface AliceEntityCursor<T> extends Iterator<T> {
      * @return an entity an current position
      */
     T getCurrent();
+
+    /**
+     * @return an entity at the given position
+     */
+    T getAtPosition(int position);
 
     /**
      * @see Cursor#getCount()
@@ -114,4 +122,20 @@ public interface AliceEntityCursor<T> extends Iterator<T> {
      * @see Cursor#unregisterDataSetObserver(DataSetObserver)
      */
     void unregisterDataSetObserver(DataSetObserver observer);
+
+    /**
+     * Refreshes cursor data in background thread.
+     * @see {@link AliceEntityCursor#requery(ActionCallback)}
+     */
+    void requery();
+
+    /**
+     * Refreshes cursor data in background thread. After refreshing new instance of cursor will be passed, but you may continue use this instance
+     */
+    void requery(ActionCallback<Cursor> callback);
+
+    /**
+     * @return {@link ContentResolver} instance
+     */
+    ContentResolver getContentResolver();
 }

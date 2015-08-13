@@ -1,7 +1,8 @@
-package com.alice.components.database;
+package com.alice.components.database.entitymanager;
 
 import android.content.ContentProviderOperation;
 import android.content.ContentProviderResult;
+import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
@@ -13,6 +14,8 @@ import android.provider.BaseColumns;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
+import com.alice.components.database.cursor.AliceBaseEntityCursor;
+import com.alice.components.database.cursor.AliceEntityCursor;
 import com.alice.components.database.models.EntityDescriptor;
 import com.alice.components.database.models.Persistable;
 import com.alice.components.database.query.AliceQuery;
@@ -61,9 +64,18 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
      * @param entityClass target entity class
      * @param cursor cursor with data
      * @param count amount of entities to read from cursor. -1 means all possible entities (all form cursor)
+     * @param closeAfter true if cursor should be closed after conversion
      * @return list of converted entities. If no entities was read or any error occurred should return empty list
      */
-    protected abstract <T> List<T> convertCursorToEntities(Class<T> entityClass, Cursor cursor, int count);
+    protected abstract <T> List<T> convertCursorToEntities(Class<T> entityClass, Cursor cursor, int count, boolean closeAfter);
+
+    /**
+     * Converts single entity from the current position of cursor
+     * @param entityClass target entity class
+     * @param cursor cursor with data
+     * @return converted entity
+     */
+    protected abstract <T> T cursorToEntity(Class<T> entityClass, Cursor cursor);
 
     /**
      * Returns the projection for the given entity class
@@ -94,11 +106,9 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
         String idColumn = getIdColumnName(entityClass);
 
         Cursor cursor = getContext().getContentResolver().query(uri, getProjectionWithRowId(entityClass), idColumn + "=?", new String[]{id}, null);
-        List<T> entities = convertCursorToEntities(entityClass, cursor, 1);
-        if (entities == null) {
-            return null;
-        }
-        return entities.isEmpty() ? null : entities.get(0);
+        T result = cursorToEntity(entityClass, cursor);
+        cursor.close();
+        return result;
     }
 
     @Override
@@ -106,7 +116,7 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
         Class<T> entityClass = query.getTargetClass();
 
         Cursor cursor = getCursorByQuery(query);
-        List<T> entities = convertCursorToEntities(entityClass, cursor, -1);
+        List<T> entities = convertCursorToEntities(entityClass, cursor, -1, true);
         if (entities == null) {
             return new ArrayList<T>();
         }
@@ -302,10 +312,20 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
     public <T> AliceEntityCursor<T> getEntityCursor(final AliceQuery<T> query) {
         Cursor cursor = getCursorByQuery(query);
 
-        return new AliceBaseEntityCursor<T>(cursor) {
+        return new AliceBaseEntityCursor<T>(cursor, getUri(query.getTargetClass())) {
             @Override
             protected T convert(Cursor cursor) {
-                return convertCursorToEntities(query.getTargetClass(), cursor, 1).get(0);
+                return cursorToEntity(query.getTargetClass(), cursor);
+            }
+
+            @Override
+            protected Cursor getActualCursor() {
+                return getCursorByQuery(query);
+            }
+
+            @Override
+            public ContentResolver getContentResolver() {
+                return context.getContentResolver();
             }
         };
     }
