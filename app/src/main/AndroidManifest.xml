@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.alice.sample" >
+    package="by.nalivajr.alice.sample" >
 
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/AppTheme"
-        android:name=".TestApplication">
+        android:name="by.nalivajr.alice.sample.TestApplication">
         <activity
-            android:name=".ui.SampleActivity"
+            android:name="by.nalivajr.alice.sample.ui.SampleActivity"
             android:label="@string/app_name" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -17,7 +17,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ui.AdapterSampleActivity"
+            android:name="by.nalivajr.alice.sample.ui.AdapterSampleActivity"
             android:label="Alice Adapter test" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -25,7 +25,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".database.DatabaseSampleActivity"
+            android:name="by.nalivajr.alice.sample.database.DatabaseSampleActivity"
             android:label="Alice EntityManager Test" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -35,7 +35,7 @@
 
         <provider
             android:authorities="alicesample"
-            android:name=".database.SampleProvider"
+            android:name="by.nalivajr.alice.sample.database.SampleProvider"
             android:exported="false"/>
     </application>
 
