@@ -6,12 +6,12 @@ import android.database.DataSetObserver;
 import android.net.Uri;
 import android.util.Log;
 
-import by.nalivajr.alice.callbacks.database.ActionCallback;
-
 import java.util.HashSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
+
+import by.nalivajr.alice.callbacks.execution.ActionCallback;
 
 /**
  * Created by Sergey Nalivko.
@@ -93,12 +93,12 @@ public abstract class AliceBaseEntityCursor<T> implements AliceEntityCursor<T> {
                     }
 
                     if (callback != null) {
-                        callback.onSuccess(cursor);
+                        callback.onFinishedSuccessfully(cursor);
                     }
                 } catch (Throwable e) {
                     if (callback != null) {
                         Log.w(TAG, "Could not update entity cursor");
-                        callback.onFailed(e);
+                        callback.onErrorOccurred(e);
                     }
                 } finally {
                     lock.unlock();

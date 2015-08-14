@@ -5,9 +5,9 @@ import android.database.ContentObserver;
 import android.database.Cursor;
 import android.database.DataSetObserver;
 
-import by.nalivajr.alice.callbacks.database.ActionCallback;
-
 import java.util.Iterator;
+
+import by.nalivajr.alice.callbacks.execution.ActionCallback;
 
 /**
  * Created by Sergey Nalivko.

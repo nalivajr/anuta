@@ -5,7 +5,7 @@ import android.database.Cursor;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
-import by.nalivajr.alice.callbacks.database.ActionCallback;
+import by.nalivajr.alice.callbacks.execution.ActionCallback;
 import by.nalivajr.alice.components.adapters.AliceDataProvidedAdapter;
 import by.nalivajr.alice.components.database.cursor.AliceEntityCursor;
 
@@ -33,12 +33,12 @@ public abstract class CursorDataProvider<T> implements DataProvider<T> {
             public void onChange(boolean selfChange) {
                 mCursor.requery(new ActionCallback<Cursor>() {
                     @Override
-                    public void onSuccess(Cursor result) {
+                    public void onFinishedSuccessfully(Cursor result) {
                         onDataUpdated();
                     }
 
                     @Override
-                    public void onFailed(Throwable e) {
+                    public void onErrorOccurred(Throwable e) {
                         Log.w(AliceDataProvidedAdapter.class.getName(), "Could not requery cursor", e);
                     }
                 });

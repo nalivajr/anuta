@@ -2,16 +2,16 @@ package by.nalivajr.alice.components.database.entitymanager;
 
 import android.support.annotation.NonNull;
 
-import by.nalivajr.alice.callbacks.database.ActionCallback;
-import by.nalivajr.alice.components.database.cursor.AliceEntityCursor;
-import by.nalivajr.alice.components.database.query.AliceQueryBuilder;
-import by.nalivajr.alice.components.database.query.AliceQuery;
-
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import by.nalivajr.alice.callbacks.execution.ActionCallback;
+import by.nalivajr.alice.components.database.cursor.AliceEntityCursor;
+import by.nalivajr.alice.components.database.query.AliceQuery;
+import by.nalivajr.alice.components.database.query.AliceQueryBuilder;
 
 /**
  * Created by Sergey Nalivko.
@@ -249,11 +249,11 @@ public class EntityManagerAsyncWrapper implements AliceAsyncEntityManager {
             try {
                 R result = action.call();
                 if (callback != null) {
-                    callback.onSuccess(result);
+                    callback.onFinishedSuccessfully(result);
                 }
             } catch (Throwable e) {
                 if (callback != null) {
-                    callback.onFailed(e);
+                    callback.onErrorOccurred(e);
                 }
             }
         }

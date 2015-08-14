@@ -1,11 +1,11 @@
 package by.nalivajr.alice.components.database.entitymanager;
 
-import by.nalivajr.alice.callbacks.database.ActionCallback;
-import by.nalivajr.alice.components.database.cursor.AliceEntityCursor;
-import by.nalivajr.alice.components.database.query.AliceQuery;
-
 import java.util.Collection;
 import java.util.List;
+
+import by.nalivajr.alice.callbacks.execution.ActionCallback;
+import by.nalivajr.alice.components.database.cursor.AliceEntityCursor;
+import by.nalivajr.alice.components.database.query.AliceQuery;
 
 /**
  * Created by Sergey Nalivko.

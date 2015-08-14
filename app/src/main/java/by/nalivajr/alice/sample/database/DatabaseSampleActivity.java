@@ -2,8 +2,6 @@ package by.nalivajr.alice.sample.database;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.provider.BaseColumns;
 import android.view.View;
 import android.widget.Button;
@@ -17,7 +15,7 @@ import java.util.List;
 
 import by.nalivajr.alice.annonatations.ui.AutoActivity;
 import by.nalivajr.alice.annonatations.ui.InnerView;
-import by.nalivajr.alice.callbacks.database.ActionCallback;
+import by.nalivajr.alice.callbacks.execution.AbstractUiOnlyCallback;
 import by.nalivajr.alice.components.adapters.AliceAbstractAdapter;
 import by.nalivajr.alice.components.adapters.data.binder.DataBinder;
 import by.nalivajr.alice.components.database.cursor.AliceEntityCursor;
@@ -114,6 +112,7 @@ public class DatabaseSampleActivity extends Activity{
         findDbBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+
                 AliceQueryBuilder<SubSubItem> builder = entityManager.getQueryBuilder(SubSubItem.class);
                 Restriction restriction = builder.notEqual(BaseColumns._ID, "51");
                 Restriction restriction3 = builder.notIn(BaseColumns._ID, new String[]{"52", "53"});
@@ -131,30 +130,20 @@ public class DatabaseSampleActivity extends Activity{
 
                 final long start = System.currentTimeMillis();
 
-                asyncEntityManager.findByQuery(query, new ActionCallback<List<SubSubItem>>() {
+                asyncEntityManager.findByQuery(query, new AbstractUiOnlyCallback<List<SubSubItem>>() {
+
                     @Override
-                    public void onSuccess(final List<SubSubItem> result) {
+                    public void onUiThreadRequested(List<SubSubItem> result, Throwable e) {
+                        if (e != null) {
+                            Toast.makeText(DatabaseSampleActivity.this, "An error during query: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                            return;
+                        }
                         subSubItemsList.clear();
                         int size = result.size() > testCount ? testCount : result.size();
                         subSubItemsList.addAll(result.subList(0, size));
                         final long end = System.currentTimeMillis();
 
-                        new Handler(Looper.getMainLooper()).post(new Runnable() {
-                            @Override
-                            public void run() {
-                                Toast.makeText(DatabaseSampleActivity.this, String.format("To read %d items were spent %d millis", result.size(), (end - start)), Toast.LENGTH_SHORT).show();
-                            }
-                        });
-                    }
-
-                    @Override
-                    public void onFailed(final Throwable e) {
-                        new Handler(Looper.getMainLooper()).post(new Runnable() {
-                            @Override
-                            public void run() {
-                                Toast.makeText(DatabaseSampleActivity.this, "An error during query: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                            }
-                        });
+                        Toast.makeText(DatabaseSampleActivity.this, String.format("To read %d items were spent %d millis", result.size(), (end - start)), Toast.LENGTH_SHORT).show();
                     }
                 });
             }
