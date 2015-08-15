@@ -2,15 +2,21 @@ package by.nalivajr.alice.components.database.cursor;
 
 import android.database.ContentObserver;
 import android.database.Cursor;
-import android.database.DataSetObserver;
 import android.net.Uri;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Looper;
+import android.support.annotation.NonNull;
 import android.util.Log;
 
 import java.util.HashSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import by.nalivajr.alice.callbacks.database.CursorUpdatedListener;
 import by.nalivajr.alice.callbacks.execution.ActionCallback;
 
 /**
@@ -21,16 +27,39 @@ public abstract class AliceBaseEntityCursor<T> implements AliceEntityCursor<T> {
 
     private static final String TAG = AliceBaseEntityCursor.class.getSimpleName();
 
-    private final ReentrantLock lock = new ReentrantLock();
+//    private final ReentrantLock lock = new ReentrantLock();
     private final Uri notificationUri;
-    private Set<ContentObserver> observers;
-    private Cursor cursor;
+    private final ContentObserver selfObserver;
+    private Set<CursorUpdatedListener> listeners;
+    private HandlerThread contentObserverThread;
+    private ExecutorService reloadThread;
 
-    public AliceBaseEntityCursor(Cursor cursor, Uri notificationUri) {
+    private Cursor cursor;
+    /**
+     * The udated cursore with reloaded data
+     */
+    private Cursor actualCursor;
+
+    private Handler handler;
+    private Handler uiHandler;
+
+    private AtomicInteger requeryCalls = new AtomicInteger(0);
+    private AtomicInteger notifyUiCalls = new AtomicInteger(0);
+
+    private boolean autoRequery = false;
+
+    public AliceBaseEntityCursor(Cursor cursor, final Uri notificationUri) {
         this.cursor = cursor;
         this.cursor.moveToFirst();
         this.notificationUri = notificationUri;
-        observers = new HashSet<ContentObserver>();
+        listeners = new HashSet<CursorUpdatedListener>();
+        initThreads();
+        handler = new Handler(contentObserverThread.getLooper());
+        uiHandler = new Handler(Looper.getMainLooper());
+        selfObserver = createSelfContentObserver();
+
+        cursor.registerContentObserver(selfObserver);
+        cursor.setNotificationUri(getContentResolver(), notificationUri);
     }
 
     /**
@@ -39,6 +68,44 @@ public abstract class AliceBaseEntityCursor<T> implements AliceEntityCursor<T> {
      * @return converted entity
      */
     protected abstract T convert(Cursor cursor);
+
+    /**
+     * Provides cursor with actual data
+     */
+    protected abstract Cursor getActualCursor();
+
+    @NonNull
+    protected ContentObserver createSelfContentObserver() {
+        return new ContentObserver(handler) {
+            @Override
+            public void onChange(final boolean selfChange) {
+                if (autoRequery) {
+                    requery();
+                } else {
+                    notifyObservers(false);
+                }
+            }
+        };
+    }
+
+    private void notifyObservers(boolean requeried) {
+        for (CursorUpdatedListener listener : listeners) {
+            if (!requeried) {
+                listener.onDataUpdated();
+            } else {
+                listener.onRequeryFinished();
+            }
+        }
+    }
+
+    private void initThreads() {
+        contentObserverThread = new HandlerThread("AliceCursorContentObserverHandlerThread");
+        contentObserverThread.start();
+        if (reloadThread != null) {
+            reloadThread.shutdownNow();
+        }
+        reloadThread = Executors.newSingleThreadExecutor();
+    }
 
     @Override
     public boolean hasNext() {
@@ -61,18 +128,13 @@ public abstract class AliceBaseEntityCursor<T> implements AliceEntityCursor<T> {
 
     @Override
     public T getAtPosition(int position) {
-        try {
-            lock.lock();
-            int currPosition = cursor.getPosition();
-            if (!cursor.moveToPosition(position)) {
-                return null;
-            }
-            T result = getCurrent();
-            cursor.moveToPosition(currPosition);
-            return result;
-        } finally {
-            lock.unlock();
+        int currPosition = cursor.getPosition();
+        if (!cursor.moveToPosition(position)) {
+            return null;
         }
+        T result = getCurrent();
+        cursor.moveToPosition(currPosition);
+        return result;
     }
 
     @Override
@@ -81,34 +143,65 @@ public abstract class AliceBaseEntityCursor<T> implements AliceEntityCursor<T> {
     }
 
     @Override
-    public void requery(final ActionCallback<Cursor> callback) {
+    public void requery(final ActionCallback<AliceEntityCursor> callback) {
+        requeryCalls.incrementAndGet();
+        if (!contentObserverThread.isAlive()) {
+            initThreads();
+            handler = new Handler(contentObserverThread.getLooper());
+        }
         Runnable action = new Runnable() {
             @Override
             public void run() {
-                try {
-                    lock.lock();
-                    swapCursor(getActualCursor());
-                    if (cursor != null) {
-                        cursor.moveToFirst();
-                    }
-
-                    if (callback != null) {
-                        callback.onFinishedSuccessfully(cursor);
-                    }
-                } catch (Throwable e) {
-                    if (callback != null) {
-                        Log.w(TAG, "Could not update entity cursor");
-                        callback.onErrorOccurred(e);
-                    }
-                } finally {
-                    lock.unlock();
-                }
+                reload(callback);
             }
         };
-        new Thread(action).start();
+        reloadThread.submit(action);
     }
 
-    protected abstract Cursor getActualCursor();
+    protected void reload(ActionCallback<AliceEntityCursor> callback) {
+        if (requeryCalls.get() > 1) {
+            Log.i(TAG, "Too much requery calls. Skipping until one left");
+            requeryCalls.decrementAndGet();
+            return;
+        }
+        try {
+            Cursor actualCursor = getActualCursor();
+            notifyUiThread(actualCursor, callback);
+        } catch (Throwable e) {
+            if (callback != null) {
+                Log.w(TAG, "Could not update entity cursor");
+                callback.onErrorOccurred(e);
+            }
+        } finally {
+            requeryCalls.decrementAndGet();
+        }
+    }
+
+    private void notifyUiThread(Cursor actualCursor, final ActionCallback<AliceEntityCursor> callback) {
+        this.actualCursor = actualCursor;
+        int notifiers = notifyUiCalls.getAndIncrement();
+        if (notifiers > 0) {
+            notifyUiCalls.decrementAndGet();
+            Log.i(TAG, "UI notification is skipped as last was not received yet");
+            return;
+        }
+        Runnable action = new Runnable() {
+            @Override
+            public void run() {
+                notifyUiCalls.decrementAndGet();
+                swapCursor(AliceBaseEntityCursor.this.actualCursor);
+                if (cursor != null) {
+                    cursor.moveToFirst();
+                }
+
+                if (callback != null) {
+                    callback.onFinishedSuccessfully(AliceBaseEntityCursor.this);
+                }
+                notifyObservers(true);
+            }
+        };
+        uiHandler.post(action);
+    }
 
     @Override
     public void remove() {
@@ -116,13 +209,12 @@ public abstract class AliceBaseEntityCursor<T> implements AliceEntityCursor<T> {
     }
 
     private Cursor swapCursor(Cursor newCursor) {
-        for (ContentObserver observer : observers) {
-            if (cursor != null) {
-                cursor.unregisterContentObserver(observer);
-            }
-            if (newCursor != null) {
-                newCursor.registerContentObserver(observer);
-            }
+        if (cursor != null) {
+            cursor.unregisterContentObserver(selfObserver);
+            cursor.close();
+        }
+        if (newCursor != null) {
+            newCursor.registerContentObserver(selfObserver);
         }
         if (newCursor != null) {
             newCursor.setNotificationUri(getContentResolver(), notificationUri);
@@ -195,6 +287,13 @@ public abstract class AliceBaseEntityCursor<T> implements AliceEntityCursor<T> {
     public void close() {
         if (cursor != null) {
             cursor.close();
+            cursor.unregisterContentObserver(selfObserver);
+        }
+        if (contentObserverThread.isAlive()) {
+            contentObserverThread.quit();
+        }
+        if (reloadThread != null) {
+            reloadThread.shutdownNow();
         }
     }
 
@@ -204,33 +303,22 @@ public abstract class AliceBaseEntityCursor<T> implements AliceEntityCursor<T> {
     }
 
     @Override
-    public void registerContentObserver(ContentObserver observer) {
-        if (cursor != null) {
-            cursor.registerContentObserver(observer);
-            cursor.setNotificationUri(getContentResolver(), notificationUri);
-            observers.add(observer);
-        }
+    public void registerCursorUpdatedListener(CursorUpdatedListener listener) {
+        listeners.add(listener);
     }
 
     @Override
-    public void unregisterContentObserver(ContentObserver observer) {
-        if (cursor != null) {
-            cursor.unregisterContentObserver(observer);
-            observers.remove(observer);
-        }
+    public void unregisterCursorUpdatedListener(CursorUpdatedListener listener) {
+        listeners.remove(listener);
     }
 
     @Override
-    public void registerDataSetObserver(DataSetObserver observer) {
-        if (cursor != null) {
-            cursor.registerDataSetObserver(observer);
-        }
+    public void setAutoRequery(boolean autoRequery) {
+        this.autoRequery = autoRequery;
     }
 
     @Override
-    public void unregisterDataSetObserver(DataSetObserver observer) {
-        if (cursor != null) {
-            cursor.unregisterDataSetObserver(observer);
-        }
+    public boolean isAutoRequery() {
+        return autoRequery;
     }
 }

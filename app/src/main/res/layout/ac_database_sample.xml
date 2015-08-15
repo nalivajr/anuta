@@ -10,35 +10,145 @@
         android:layout_height="match_parent"
         android:layout_weight="1"
         android:orientation="vertical">
-        <Button
-            android:id="@+id/btn_save_db"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Save"/>
 
-        <Button
-            android:id="@+id/btn_find_db"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Find"/>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
 
-        <Button
-            android:id="@+id/btn_update_db"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Update"/>
+            <Button
+                android:id="@+id/btn_save_db"
+                android:layout_width="@dimen/button_def_width"
+                android:layout_height="wrap_content"
+                android:text="Save"/>
 
-        <Button
-            android:id="@+id/btn_delete_db"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Delete"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingLeft="@dimen/padding10"
+                android:paddingRight="@dimen/padding10"
+                android:text="Amount:"/>
+
+            <EditText
+                android:id="@+id/et_save_amount"
+                android:layout_width="50dp"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:paddingRight="@dimen/padding10"/>
+
+            <CheckBox
+                android:id="@+id/chb_save_one"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Save one"/>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <Button
+                android:id="@+id/btn_find_db"
+                android:layout_width="@dimen/button_def_width"
+                android:layout_height="wrap_content"
+                android:text="Find"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingLeft="@dimen/padding10"
+                android:paddingRight="@dimen/padding10"
+                android:text="Amount:"/>
+
+            <EditText
+                android:id="@+id/et_find_amount"
+                android:layout_width="50dp"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:paddingRight="@dimen/padding10"/>
+
+            <CheckBox
+                android:id="@+id/chb_find_all"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Find all"/>
+
+        </LinearLayout>
+
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <Button
+                android:id="@+id/btn_update_db"
+                android:layout_width="@dimen/button_def_width"
+                android:layout_height="wrap_content"
+                android:text="Update"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingLeft="@dimen/padding10"
+                android:paddingRight="@dimen/padding10"
+                android:text="All if not checked"/>
+
+            <CheckBox
+                android:id="@+id/chb_update_last"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Update last found"/>
+
+        </LinearLayout>
+
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <Button
+                android:id="@+id/btn_delete_db"
+                android:layout_width="@dimen/button_def_width"
+                android:layout_height="wrap_content"
+                android:text="Delete"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingLeft="@dimen/padding10"
+                android:paddingRight="@dimen/padding10"
+                android:text="All if not checked"/>
+
+            <CheckBox
+                android:id="@+id/chb_delete_last_found"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Delete last found"/>
+
+        </LinearLayout>
+
     </LinearLayout>
 
-    <ListView
-        android:id="@+id/lv_cursor_adapter_sample"
+    <LinearLayout
         android:layout_width="0dp"
         android:layout_height="match_parent"
-        android:layout_weight="1">
-    </ListView>
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:weightSum="1">
+
+        <CheckBox
+            android:id="@+id/rb_toggle_list"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="Toggle list"
+            android:checked="true"/>
+
+        <ListView
+            android:id="@+id/lv_cursor_adapter_sample"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+        </ListView>
+    </LinearLayout>
 </LinearLayout>

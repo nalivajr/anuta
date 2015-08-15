@@ -6,6 +6,8 @@ package by.nalivajr.alice.components.database.query;
  */
 
 
+import android.content.ContentValues;
+
 /**
  * Describes an interface which are used for selection
  */
@@ -24,4 +26,23 @@ public interface AliceQuery<T> {
      * @return the class of entity to be retrieved
      */
     public Class<T> getTargetClass();
+
+    /**
+     * @return the type of query
+     */
+    public QueryType getType();
+
+    /**
+     * @return content values, specified for query
+     */
+    public ContentValues getContentValues();
+
+    public String getLimit();
+
+    public static enum QueryType {
+        SELECT,
+        INSERT,
+        UPDATE,
+        DELETE
+    }
 }

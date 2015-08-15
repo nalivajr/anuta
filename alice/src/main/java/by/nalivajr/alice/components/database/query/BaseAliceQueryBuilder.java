@@ -1,5 +1,8 @@
 package by.nalivajr.alice.components.database.query;
 
+import android.content.ContentValues;
+import android.support.annotation.NonNull;
+
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -25,8 +28,12 @@ public final class BaseAliceQueryBuilder<T> implements AliceQueryBuilder<T> {
     private static final String GREATER = ">";
     private static final String GREATER_OR_EQUAL = ">=";
 
+    private static final String LIMIT = "LIMIT";
+    private static final String OFFSET = "OFFSET";
+
     private Class<T> cls;
     private StringBuilder builder = new StringBuilder();
+    private String limitation = "";
     private List<String> args = new LinkedList<String>();
 
     public BaseAliceQueryBuilder(Class<T> cls) {
@@ -123,14 +130,52 @@ public final class BaseAliceQueryBuilder<T> implements AliceQueryBuilder<T> {
         return this;
     }
 
+    @Override
+    public AliceQueryBuilder<T> limit(int offset, int size) {
+        StringBuilder builder = new StringBuilder();
+        if (size > 0) {
+            builder.append(LIMIT).append(' ').append(size);
+            if (offset > 0) {
+                builder.append(' ').append(OFFSET).append(' ').append(offset);
+            }
+        }
+        limitation = builder.toString();
+        return this;
+    }
+
     public AliceQuery<T> build() {
         if (builder.length() == 0) {
             return buildFindAllQuery();
         }
-        return new AliceSimpleQuery<T>(builder.toString().trim(), args.toArray(new String[args.size()]), cls);
+        return buildQuery(AliceQuery.QueryType.SELECT, null);
     }
 
     public AliceQuery<T> buildFindAllQuery() {
-        return new AliceSimpleQuery<T>(null, null, cls);
+        return buildQuery(AliceQuery.QueryType.SELECT, null);
+    }
+
+    @Override
+    public AliceQuery<T> buildDelete() {
+        return buildQuery(AliceQuery.QueryType.DELETE, null);
+    }
+
+    @Override
+    public AliceQuery<T> buildSelect() {
+        return buildQuery(AliceQuery.QueryType.SELECT, null);
+    }
+
+    @Override
+    public AliceQuery<T> buildInsert(ContentValues values) {
+        return buildQuery(AliceQuery.QueryType.INSERT, values);
+    }
+
+    @Override
+    public AliceQuery<T> buildUpdate(ContentValues values) {
+        return buildQuery(AliceQuery.QueryType.UPDATE, values);
+    }
+
+    @NonNull
+    protected AliceQuery<T> buildQuery(AliceQuery.QueryType type, ContentValues contentValues) {
+        return new AliceSimpleQuery<T>(builder.toString().trim(), args.toArray(new String[args.size()]), cls, type, contentValues, limitation);
     }
 }

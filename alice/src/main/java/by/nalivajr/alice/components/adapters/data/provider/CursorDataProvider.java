@@ -1,47 +1,49 @@
 package by.nalivajr.alice.components.adapters.data.provider;
 
-import android.database.ContentObserver;
-import android.database.Cursor;
 import android.support.annotation.NonNull;
-import android.util.Log;
 
-import by.nalivajr.alice.callbacks.execution.ActionCallback;
-import by.nalivajr.alice.components.adapters.AliceDataProvidedAdapter;
+import by.nalivajr.alice.callbacks.database.CursorUpdatedListener;
 import by.nalivajr.alice.components.database.cursor.AliceEntityCursor;
 
 /**
  * Created by Sergey Nalivko.
  * email: snalivko93@gmail.com
  */
-public abstract class CursorDataProvider<T> implements DataProvider<T> {
+public class CursorDataProvider<T> extends AbstractDataProvider<T> {
     private AliceEntityCursor<T> mCursor;
 
     public CursorDataProvider(AliceEntityCursor<T> cursor) {
         this.mCursor = cursor;
-        cursor.registerContentObserver(createObserver());
+        cursor.registerCursorUpdatedListener(createListener());
     }
 
     /**
-     * Is invoked when cursor's managed data update
+     * Is called in Background thread when cursor's managed data update and before cursor will be requeried
      */
-    protected abstract void onDataUpdated();
+    protected void onContentChanged() {
+        // Do nothing
+    }
+    
+    /**
+     * Is called in Main Thread when cursor was requeried and before {@link DataProvider#notifyDataSetChanged()} will be called
+     */
+    protected void onCursorRequeried() {
+        // Do nothing
+    }
 
     @NonNull
-    private ContentObserver createObserver() {
-        return new ContentObserver(null) {
+    private CursorUpdatedListener createListener() {
+        return new CursorUpdatedListener() {
             @Override
-            public void onChange(boolean selfChange) {
-                mCursor.requery(new ActionCallback<Cursor>() {
-                    @Override
-                    public void onFinishedSuccessfully(Cursor result) {
-                        onDataUpdated();
-                    }
+            public void onDataUpdated() {
+                onContentChanged();
+                mCursor.requery();
+            }
 
-                    @Override
-                    public void onErrorOccurred(Throwable e) {
-                        Log.w(AliceDataProvidedAdapter.class.getName(), "Could not requery cursor", e);
-                    }
-                });
+            @Override
+            public void onRequeryFinished() {
+                onCursorRequeried();
+                notifyDataSetChanged();
             }
         };
     }

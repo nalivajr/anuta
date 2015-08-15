@@ -1,12 +1,11 @@
 package by.nalivajr.alice.components.database.cursor;
 
 import android.content.ContentResolver;
-import android.database.ContentObserver;
 import android.database.Cursor;
-import android.database.DataSetObserver;
 
 import java.util.Iterator;
 
+import by.nalivajr.alice.callbacks.database.CursorUpdatedListener;
 import by.nalivajr.alice.callbacks.execution.ActionCallback;
 
 /**
@@ -104,24 +103,16 @@ public interface AliceEntityCursor<T> extends Iterator<T> {
     boolean isClosed();
 
     /**
-     * @see Cursor#registerContentObserver(ContentObserver)
+     * Registers listener, which will be used to notify about data updates
+     * @param listener the instance of {@link CursorUpdatedListener} to register
      */
-    void registerContentObserver(ContentObserver observer);
+    void registerCursorUpdatedListener(CursorUpdatedListener listener);
 
     /**
-     * @see Cursor#unregisterContentObserver(ContentObserver)
+     * Unegisters listener
+     * @param listener the instance of {@link CursorUpdatedListener} to unregister
      */
-    void unregisterContentObserver(ContentObserver observer);
-
-    /**
-     * @see Cursor#registerDataSetObserver(DataSetObserver)
-     */
-    void registerDataSetObserver(DataSetObserver observer);
-
-    /**
-     * @see Cursor#unregisterDataSetObserver(DataSetObserver)
-     */
-    void unregisterDataSetObserver(DataSetObserver observer);
+    void unregisterCursorUpdatedListener(CursorUpdatedListener listener);
 
     /**
      * Refreshes cursor data in background thread.
@@ -132,7 +123,18 @@ public interface AliceEntityCursor<T> extends Iterator<T> {
     /**
      * Refreshes cursor data in background thread. After refreshing new instance of cursor will be passed, but you may continue use this instance
      */
-    void requery(ActionCallback<Cursor> callback);
+    void requery(ActionCallback<AliceEntityCursor> callback);
+
+    /**
+     * Set the requery mode. If true, then cursor will automatically reload data from database. Be aware, it may decrease performance.
+     * By default auto-requery is disabled
+     */
+    void setAutoRequery(boolean autoRequery);
+
+    /**
+     * @return true if autorequeryEnabled and false otherwise
+     */
+    boolean isAutoRequery();
 
     /**
      * @return {@link ContentResolver} instance

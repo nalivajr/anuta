@@ -1,6 +1,7 @@
 package by.nalivajr.alice.components.adapters;
 
 import android.content.Context;
+import android.database.DataSetObserver;
 
 import by.nalivajr.alice.components.adapters.data.provider.DataProvider;
 
@@ -15,6 +16,12 @@ public abstract class AliceDataProvidedSingleViewAdapter<T> extends AliceSingleV
     public AliceDataProvidedSingleViewAdapter(Context context, int layoutId, DataProvider<T> dataProvider) {
         super(context, layoutId);
         this.dataProvider = dataProvider;
+        this.dataProvider.registerDataSetObserver(new DataSetObserver() {
+            @Override
+            public void onChanged() {
+                notifyDataSetChanged();
+            }
+        });
     }
 
     @Override

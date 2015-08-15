@@ -14,18 +14,6 @@ import android.provider.BaseColumns;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
-import by.nalivajr.alice.exceptions.OperationExecutionException;
-import by.nalivajr.alice.tools.Alice;
-import by.nalivajr.alice.components.database.cursor.AliceBaseEntityCursor;
-import by.nalivajr.alice.components.database.cursor.AliceEntityCursor;
-import by.nalivajr.alice.components.database.models.EntityDescriptor;
-import by.nalivajr.alice.components.database.models.Persistable;
-import by.nalivajr.alice.components.database.query.AliceQuery;
-import by.nalivajr.alice.components.database.query.AliceQueryBuilder;
-import by.nalivajr.alice.components.database.query.BaseAliceQueryBuilder;
-import by.nalivajr.alice.exceptions.DifferentEntityClassesException;
-import by.nalivajr.alice.exceptions.NotRegisteredEntityClassUsedException;
-
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -35,6 +23,19 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
+import by.nalivajr.alice.components.database.cursor.AliceBaseEntityCursor;
+import by.nalivajr.alice.components.database.cursor.AliceEntityCursor;
+import by.nalivajr.alice.components.database.models.EntityDescriptor;
+import by.nalivajr.alice.components.database.models.Persistable;
+import by.nalivajr.alice.components.database.query.AliceQuery;
+import by.nalivajr.alice.components.database.query.AliceQueryBuilder;
+import by.nalivajr.alice.components.database.query.BaseAliceQueryBuilder;
+import by.nalivajr.alice.exceptions.DifferentEntityClassesException;
+import by.nalivajr.alice.exceptions.InvalidQueryTypeException;
+import by.nalivajr.alice.exceptions.NotRegisteredEntityClassUsedException;
+import by.nalivajr.alice.exceptions.OperationExecutionException;
+import by.nalivajr.alice.tools.Alice;
 
 /**
  * Created by Sergey Nalivko.
@@ -330,7 +331,42 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
         };
     }
 
+    @Override
+    public <T> boolean executeQuery(AliceQuery<T> query) {
+        checkClassRegistered(query.getTargetClass());
+        Uri uri = getUri(query.getTargetClass());
+
+        executeQuery(query, uri);
+        return false;
+    }
+
+    protected <T> boolean executeQuery(AliceQuery<T> query, Uri uri) {
+        try {
+            switch (query.getType()) {
+                case SELECT:
+                    getCursorByQuery(query);
+                    break;
+                case UPDATE:
+                    getContext().getContentResolver().update(uri, query.getContentValues(), query.getSelection(), query.getSelectionArgs());
+                    break;
+                case INSERT:
+                    getContext().getContentResolver().insert(uri, query.getContentValues());
+                    break;
+                case DELETE:
+                    getContext().getContentResolver().delete(uri, query.getSelection(), query.getSelectionArgs());
+                    break;
+            }
+            return true;
+        } catch (Throwable e) {
+            Log.w(TAG, "An error occurred during query execution", e);
+            return false;
+        }
+    }
+
     protected <T> Cursor getCursorByQuery(AliceQuery<T> query) {
+        if (query.getType() != AliceQuery.QueryType.SELECT) {
+            throw new InvalidQueryTypeException(query.getType(), "Could not be used to get cursor. Please use AliceEntityManager.executeQuery method");
+        }
         final Class<T> entityClass = query.getTargetClass();
         checkClassRegistered(entityClass);
 
@@ -338,7 +374,8 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
         String selection = query.getSelection();
         String[] args = query.getSelectionArgs();
 
-        return getContext().getContentResolver().query(uri, getProjectionWithRowId(entityClass), selection, args, null);
+        String limit = query.getLimit() == null || query.getLimit().isEmpty() ? null : "1 " + query.getLimit();
+        return getContext().getContentResolver().query(uri, getProjectionWithRowId(entityClass), selection, args, limit);
     }
 
     @Nullable

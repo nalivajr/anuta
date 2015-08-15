@@ -3,20 +3,8 @@ package by.nalivajr.alice.tools;
 import android.content.Context;
 import android.content.res.Resources;
 import android.content.res.XmlResourceParser;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
 import android.view.View;
-
-import by.nalivajr.alice.components.adapters.AliceAbstractAdapter;
-import by.nalivajr.alice.components.adapters.AliceDataProvidedSingleViewAdapter;
-import by.nalivajr.alice.components.adapters.data.binder.DataBinder;
-import by.nalivajr.alice.components.adapters.data.provider.CursorDataProvider;
-import by.nalivajr.alice.components.adapters.data.provider.DataProvider;
-import by.nalivajr.alice.components.database.cursor.AliceEntityCursor;
-import by.nalivajr.alice.components.database.entitymanager.AliceEntityManager;
-import by.nalivajr.alice.components.database.entitymanager.AliceRelationalEntityManager;
-import by.nalivajr.alice.components.database.query.AliceQuery;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -28,6 +16,18 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import by.nalivajr.alice.callbacks.database.CursorUpdatedListener;
+import by.nalivajr.alice.components.adapters.AliceAbstractAdapter;
+import by.nalivajr.alice.components.adapters.AliceDataProvidedSingleViewAdapter;
+import by.nalivajr.alice.components.adapters.data.binder.DataBinder;
+import by.nalivajr.alice.components.adapters.data.provider.AbstractDataProvider;
+import by.nalivajr.alice.components.adapters.data.provider.CursorDataProvider;
+import by.nalivajr.alice.components.adapters.data.provider.DataProvider;
+import by.nalivajr.alice.components.database.cursor.AliceEntityCursor;
+import by.nalivajr.alice.components.database.entitymanager.AliceEntityManager;
+import by.nalivajr.alice.components.database.entitymanager.AliceRelationalEntityManager;
+import by.nalivajr.alice.components.database.query.AliceQuery;
 
 /**
  * Created by Sergey Nalivko.
@@ -110,7 +110,7 @@ public final class AdapterTools {
      * @return created instance
      */
     public <T> DataProvider<T> createProvider(final Collection<T> items) {
-        return new DataProvider<T>() {
+        return new AbstractDataProvider<T>() {
 
             private List<T> itemsList = new ArrayList<T>(items);
 
@@ -135,7 +135,7 @@ public final class AdapterTools {
      * @return created instance
      */
     public <T> DataProvider<T> createProvider(final T ... items) {
-        return new DataProvider<T>() {
+        return new AbstractDataProvider<T>() {
 
             private List<T> itemsList = Arrays.asList(items);
 
@@ -155,32 +155,58 @@ public final class AdapterTools {
     }
 
     /**
-     * Creates instance of {@link DataProvider} based on item's collection
+     * Creates instance of {@link DataProvider} based on relational cursor
      * @param cursor source items cursor
-     * @param dataUpdatedAction the callback which will be invoked when data updated
+     * @param listener the callback which will be invoked when data updated
      * @return created instance
      */
-    public <T> DataProvider<T> createProvider(final AliceEntityCursor<T> cursor, final Runnable dataUpdatedAction) {
+    public <T> DataProvider<T> createProvider(final AliceEntityCursor<T> cursor, final CursorUpdatedListener listener) {
         return new CursorDataProvider<T>(cursor) {
             @Override
-            protected void onDataUpdated() {
-                if (dataUpdatedAction != null) {
-                    dataUpdatedAction.run();
+            protected void onContentChanged() {
+                if (listener != null) {
+                    listener.onDataUpdated();
+                }
+            }
+
+            @Override
+            protected void onCursorRequeried() {
+                if (listener != null) {
+                    listener.onRequeryFinished();
                 }
             }
         };
     }
 
     /**
-     * Creates instance of {@link DataProvider} based on item's collection
+     * Creates instance of {@link DataProvider} based on query to relational entity manager
      * Be aware that this is potentially heavy operation to be run in main thread
      * @param context the context of provider usage
      * @param query the query for items
-     * @param dataUpdatedAction the callback which will be invoked when data updated
+     * @param listener the callback which will be invoked when data updated
      * @return created instance
      */
-    public <T> DataProvider<T> createProvider(Context context, AliceQuery<T> query, Runnable dataUpdatedAction) {
+    public <T> DataProvider<T> createProvider(Context context, AliceQuery<T> query, CursorUpdatedListener listener) {
+        return createProvider(context, query, false, listener);
+    }
 
+    /**
+     * Creates instance of {@link DataProvider} based on query to relational entity manager
+     * Be aware that this is potentially heavy operation to be run in main thread
+     * @param context the context of provider usage
+     * @param query the query for items
+     * @param listener the callback which will be invoked when data updated
+     * @param autoRequery true if cursor, built on query, should automatically requery data
+     * @return created instance
+     */
+    public <T> DataProvider<T> createProvider(Context context, AliceQuery<T> query, boolean autoRequery, CursorUpdatedListener listener) {
+
+        AliceEntityCursor<T> entityCursor = createRelationalEntityCursor(context, query);
+        entityCursor.setAutoRequery(autoRequery);
+        return createProvider(entityCursor, listener);
+    }
+
+    private <T> AliceEntityCursor<T> createRelationalEntityCursor(final Context context, AliceQuery<T> query) {
         final List<Class<?>> entityClasses = new ArrayList<>(1);
         entityClasses.add(query.getTargetClass());
 
@@ -190,7 +216,7 @@ public final class AdapterTools {
                 return entityClasses;
             }
         };
-        return createProvider(entityManager.getEntityCursor(query), dataUpdatedAction);
+        return entityManager.getEntityCursor(query);
     }
 
     /**
@@ -254,34 +280,14 @@ public final class AdapterTools {
      * @return created instance
      */
     public <T> AliceAbstractAdapter<T> buildAdapter(Context context, final DataBinder<T> binder, final int layoutId, AliceQuery<T> query) {
-        class AdapterWrapper {
-            private AliceAbstractAdapter<T> adapter;
-        }
+        final AliceEntityCursor<T> cursor = createRelationalEntityCursor(context, query);
 
-        final AdapterWrapper wrapper = new AdapterWrapper();
-        Runnable callback = new Runnable() {
-
-            private Handler uiHandler = new Handler(Looper.getMainLooper());
-
-            @Override
-            public void run() {
-                uiHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        wrapper.adapter.notifyDataSetChanged();
-                    }
-                });
-            }
-        };
-
-        DataProvider<T> dataProvider = createProvider(context, query, callback);
-        wrapper.adapter = new AliceDataProvidedSingleViewAdapter<T>(context, layoutId, dataProvider) {
+        DataProvider<T> dataProvider = new CursorDataProvider<T>(cursor);
+        return new AliceDataProvidedSingleViewAdapter<T>(context, layoutId, dataProvider) {
             @Override
             protected void bindView(View view, Integer viewId, T item) {
                 binder.bindView(view, layoutId, viewId, item);
             }
         };
-
-        return wrapper.adapter;
     }
 }

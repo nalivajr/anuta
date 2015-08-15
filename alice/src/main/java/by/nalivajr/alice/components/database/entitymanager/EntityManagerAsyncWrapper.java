@@ -234,6 +234,21 @@ public class EntityManagerAsyncWrapper implements AliceAsyncEntityManager {
         return new AsyncDatabaseAccessTask<R>(action, callback);
     }
 
+    @Override
+    public <T> boolean executeQuery(AliceQuery<T> query) {
+        return entityManager.executeQuery(query);
+    }
+
+    @Override
+    public <T> void executeQuery(final AliceQuery<T> query, final ActionCallback<Boolean> callback) {
+        executorService.submit(createTask(new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+                return entityManager.executeQuery(query);
+            }
+        }, callback));
+    }
+
     private static class AsyncDatabaseAccessTask<R> implements Runnable {
 
         private Callable<R> action;

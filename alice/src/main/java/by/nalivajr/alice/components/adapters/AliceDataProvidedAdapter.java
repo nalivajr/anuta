@@ -1,11 +1,12 @@
 package by.nalivajr.alice.components.adapters;
 
 import android.content.Context;
-
-import by.nalivajr.alice.components.adapters.data.provider.DataProvider;
+import android.database.DataSetObserver;
 
 import java.util.List;
 import java.util.Map;
+
+import by.nalivajr.alice.components.adapters.data.provider.DataProvider;
 
 /**
  * Created by Sergey Nalivko.
@@ -18,6 +19,15 @@ public abstract class AliceDataProvidedAdapter<T> extends AliceAbstractAdapter<T
     public AliceDataProvidedAdapter(Context context, Map<Integer, List<Integer>> layoutIdToSubViewsIdsMap, DataProvider<T> dataProvider) {
         super(context, layoutIdToSubViewsIdsMap);
         this.dataProvider = dataProvider;
+        if (dataProvider != null) {
+            return;
+        }
+        this.dataProvider.registerDataSetObserver(new DataSetObserver() {
+            @Override
+            public void onChanged() {
+                notifyDataSetChanged();
+            }
+        });
     }
 
     @Override

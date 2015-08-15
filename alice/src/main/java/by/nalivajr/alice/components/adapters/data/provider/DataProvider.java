@@ -1,5 +1,7 @@
 package by.nalivajr.alice.components.adapters.data.provider;
 
+import android.database.DataSetObserver;
+
 /**
  * Created by Sergey Nalivko.
  * email: snalivko93@gmail.com
@@ -19,4 +21,22 @@ public interface DataProvider<T> {
      * @throws IndexOutOfBoundsException if index >= {@link DataProvider#count()}
      */
     public T getItem(int position);
+
+    /**
+     * Notifies observers, that data changed
+     */
+    public void notifyDataSetChanged();
+
+    /**
+     * Registers observer, which will be used to notify about data updates
+     * @param observer the instance of {@link DataSetObserver} to register
+     */
+    public void registerDataSetObserver(DataSetObserver observer);
+
+    /**
+     * Unregisters observer
+     * @param observer the instance of {@link DataSetObserver} to unregister
+     */
+    public void unregisterDataSetObserver(DataSetObserver observer);
+
 }

@@ -1,5 +1,7 @@
 package by.nalivajr.alice.components.database.query;
 
+import android.content.ContentValues;
+
 /**
  * Created by Sergey Nalivko.
  * email: snalivko93@gmail.com
@@ -27,6 +29,16 @@ public interface AliceQueryBuilder<T> {
     public AliceQueryBuilder<T> and(Restriction restriction);
 
     public AliceQueryBuilder<T> or(Restriction restriction);
+
+    public AliceQueryBuilder<T> limit(int offset, int size);
+
+    public AliceQuery<T> buildDelete();
+
+    public AliceQuery<T> buildSelect();
+
+    public AliceQuery<T> buildInsert(ContentValues values);
+
+    public AliceQuery<T> buildUpdate(ContentValues values);
 
     public AliceQuery<T> build();
 

@@ -37,5 +37,7 @@ public interface AliceAsyncEntityManager extends AliceEntityManager {
 
     <T> void getEntityCursor(AliceQuery<T> query, ActionCallback<AliceEntityCursor<T>> callback);
 
+    <T> void executeQuery(AliceQuery<T> query, ActionCallback<Boolean> callback);
+
     void cancelAll();
 }

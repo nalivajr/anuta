@@ -1,11 +1,11 @@
 package by.nalivajr.alice.components.database.entitymanager;
 
+import java.util.Collection;
+import java.util.List;
+
 import by.nalivajr.alice.components.database.cursor.AliceEntityCursor;
 import by.nalivajr.alice.components.database.query.AliceQuery;
 import by.nalivajr.alice.components.database.query.AliceQueryBuilder;
-
-import java.util.Collection;
-import java.util.List;
 
 /**
  * Created by Sergey Nalivko.
@@ -109,4 +109,11 @@ public interface AliceEntityManager {
      * @return an instance of {@link AliceEntityCursor} which can be used to iterate objects from database
      */
     public <T> AliceEntityCursor<T> getEntityCursor(AliceQuery<T> query);
+
+    /**
+     * Executes query and returns true if query was executed successfully and false otherwise
+     * @param query the query to be executed
+     * @return {@code true} if query was executed successfully and {@code false} otherwise
+     */
+    public <T> boolean executeQuery(AliceQuery<T> query);
 }
