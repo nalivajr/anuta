@@ -4,19 +4,6 @@ import android.content.ContentValues;
 import android.provider.BaseColumns;
 import android.util.Log;
 
-import by.nalivajr.alice.exceptions.IncorrectMappingException;
-import by.nalivajr.alice.annonatations.database.Column;
-import by.nalivajr.alice.annonatations.database.Entity;
-import by.nalivajr.alice.annonatations.database.Id;
-import by.nalivajr.alice.components.database.models.ColumnDescriptor;
-import by.nalivajr.alice.components.database.models.EntityDescriptor;
-import by.nalivajr.alice.components.database.models.Identifiable;
-import by.nalivajr.alice.components.database.models.Persistable;
-import by.nalivajr.alice.components.database.models.SqliteDataType;
-import by.nalivajr.alice.exceptions.InvalidDataTypeException;
-import by.nalivajr.alice.exceptions.InvalidEntityIdMappingException;
-import by.nalivajr.alice.exceptions.InvalidRowIdMappingException;
-import by.nalivajr.alice.exceptions.NotAnnotatedEntityException;
 import com.google.gson.Gson;
 
 import java.lang.reflect.Field;
@@ -26,9 +13,30 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+
+import by.nalivajr.alice.annonatations.database.Column;
+import by.nalivajr.alice.annonatations.database.Entity;
+import by.nalivajr.alice.annonatations.database.Id;
+import by.nalivajr.alice.annonatations.database.ManyToMany;
+import by.nalivajr.alice.annonatations.database.OneToMany;
+import by.nalivajr.alice.annonatations.database.RelatedEntity;
+import by.nalivajr.alice.components.database.models.ColumnDescriptor;
+import by.nalivajr.alice.components.database.models.EntityDescriptor;
+import by.nalivajr.alice.components.database.models.Identifiable;
+import by.nalivajr.alice.components.database.models.Persistable;
+import by.nalivajr.alice.components.database.models.RelationDescriptor;
+import by.nalivajr.alice.components.database.models.SqliteDataType;
+import by.nalivajr.alice.exceptions.IncorrectMappingException;
+import by.nalivajr.alice.exceptions.InvalidDataTypeException;
+import by.nalivajr.alice.exceptions.InvalidEntityIdMappingException;
+import by.nalivajr.alice.exceptions.InvalidRowIdMappingException;
+import by.nalivajr.alice.exceptions.NotAnnotatedEntityException;
+import by.nalivajr.alice.exceptions.NotEntityClassUsedInRelation;
 
 /**
  * Created by Sergey Nalivko.
@@ -55,6 +63,77 @@ public final class DatabaseTools {
         for (Class entityClass : entityClasses) {
             builder.append(generateRelationalTableScript(entityClass));
         }
+        Map<Class<?>, Set<String>> addedColumns = new HashMap<Class<?>, Set<String>>();
+        Set<RelationDescriptor> descriptors = new HashSet<RelationDescriptor>();
+        Map<String, RelationDescriptor> addedTables = new HashMap<String, RelationDescriptor>();
+
+        for (Class<?> entityClass : entityClasses) {
+            List<Field> relationEntityFields = Alice.reflectionTools.getFieldsAnnotatedWith(entityClass, RelatedEntity.class);
+
+            for (Field field : relationEntityFields) {
+                RelationDescriptor relationDescriptor = new RelationDescriptor(entityClass, field);
+                descriptors.add(relationDescriptor);
+
+                String script = generateAddColumnScript(addedColumns, entityClass, relationDescriptor);
+                builder.append(script);
+
+            }
+
+            List<Field> oneToManyColumns = Alice.reflectionTools.getFieldsAnnotatedWith(entityClass, OneToMany.class);
+            for (Field field : oneToManyColumns) {
+                RelationDescriptor relationDescriptor = new RelationDescriptor(entityClass, field);
+                descriptors.add(relationDescriptor);
+
+                String script = generateAddColumnScript(addedColumns, entityClass, relationDescriptor);
+                builder.append(script);
+            }
+
+            List<Field> manyToManyColumns = Alice.reflectionTools.getFieldsAnnotatedWith(entityClass, ManyToMany.class);
+            for (Field field : manyToManyColumns) {
+                RelationDescriptor relationDescriptor = new RelationDescriptor(entityClass, field);
+                addedTables.put(relationDescriptor.getRelationTable(), relationDescriptor);
+            }
+        }
+
+        for (String tableName : addedTables.keySet()) {
+            RelationDescriptor descriptor = addedTables.get(tableName);
+            builder.append("CREATE TABLE ")
+                    .append(tableName)
+                    .append(" (_id INTEGER PRIMARY KEY AUTOINCREMENT, ")
+                    .append(descriptor.getJoinRelationColumnName())
+                    .append(' ')
+                    .append(descriptor.getRelationColumnType())
+                    .append(',').append(' ')
+                    .append(descriptor.getJoinReferencedRelationColumnName())
+                    .append(' ')
+                    .append(descriptor.getRelationReferencedColumnType())
+                    .append(')').append(';');
+        }
+
+        return builder.toString();
+    }
+
+    protected String generateAddColumnScript(Map<Class<?>, Set<String>> addedColumns, Class<?> entityClass, RelationDescriptor relationDescriptor) {
+        Class<?> relationHoldingEntity = relationDescriptor.getRelationHoldingEntity();
+        SqliteDataType dataType = relationHoldingEntity == entityClass ? relationDescriptor.getRelationColumnType() : relationDescriptor.getRelationReferencedColumnType();
+        String columnName = relationHoldingEntity == entityClass ? relationDescriptor.getJoinRelationColumnName() : relationDescriptor.getJoinReferencedRelationColumnName();
+        Set<String> addedColumnsSet = addedColumns.get(relationHoldingEntity);
+        if (addedColumnsSet == null) {
+            addedColumnsSet = new HashSet<String>();
+            addedColumns.put(relationHoldingEntity, addedColumnsSet);
+        }
+        if (addedColumnsSet.contains(columnName) || Alice.databaseTools.getFieldForColumnName(columnName, relationHoldingEntity) != null) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder();
+        builder.append("ALTER TABLE ")
+                .append(relationDescriptor.getRelationTable())
+                .append(" ADD COLUMN ")
+                .append(columnName)
+                .append(' ')
+                .append(dataType)
+                .append(';');
+        addedColumnsSet.add(columnName);
         return builder.toString();
     }
 
@@ -93,10 +172,7 @@ public final class DatabaseTools {
     public <T> String generateRelationalTableScript(Class<T> cls) {
         validateEntityClass(cls);
         Entity entityAnnotation = cls.getAnnotation(Entity.class);
-        String tableName = entityAnnotation.tableName();
-        if (tableName.isEmpty()) {
-            tableName = cls.getSimpleName();
-        }
+        String tableName = Alice.databaseTools.getEntityTableName(cls, entityAnnotation);
 
         StringBuilder builder = new StringBuilder();
         builder.append(String.format("CREATE TABLE %s (", tableName));
@@ -124,10 +200,7 @@ public final class DatabaseTools {
     public <T> String generateNoSQLTableScript(Class<T> cls) {
         validateEntityClass(cls);
         Entity entityAnnotation = cls.getAnnotation(Entity.class);
-        String tableName = entityAnnotation.tableName();
-        if (tableName.isEmpty()) {
-            tableName = cls.getSimpleName();
-        }
+        String tableName = getEntityTableName(cls, entityAnnotation);
 
         StringBuilder builder = new StringBuilder();
         builder.append(String.format("CREATE TABLE %s (", tableName));
@@ -170,15 +243,12 @@ public final class DatabaseTools {
         if (entityAnnotation == null) {
             throw new NotAnnotatedEntityException(cls);
         }
-        String tableName = entityAnnotation.tableName();
-        if (tableName.isEmpty()) {
-            tableName = cls.getSimpleName();
-        }
+        String tableName = getEntityTableName(cls, entityAnnotation);
         return String.format("DROP TABLE %s;", tableName);
     }
 
 
-    private <T> void validateFields(List<Field> columnFields, Class<T> cls) {
+    private <T> void validateColumnFields(List<Field> columnFields, Class<T> cls) {
         Set<String> columnNames = new HashSet<String>();
         int ids = 0;
         for(Field field : columnFields) {
@@ -624,7 +694,83 @@ public final class DatabaseTools {
             throw new NotAnnotatedEntityException(cls);
         }
         List<Field> columnFields = extractFields(cls);
-        validateFields(columnFields, cls);
+        validateColumnFields(columnFields, cls);
+        List<Field> relatedEntityFields = Alice.reflectionTools.getFieldsAnnotatedWith(cls, RelatedEntity.class);
+        validateRelatedEntityFields(relatedEntityFields, cls);
+        List<Field> oneToManyFields = Alice.reflectionTools.getFieldsAnnotatedWith(cls, OneToMany.class);
+        validateOneToManyFields(oneToManyFields, cls);
+        List<Field> manyToManyFields = Alice.reflectionTools.getFieldsAnnotatedWith(cls, ManyToMany.class);
+        validateManyToManyFields(manyToManyFields, cls);
+    }
+
+    private void validateRelatedEntityFields(List<Field> relatedEntityFields, Class<?> cls) {
+        for (Field field : relatedEntityFields) {
+            RelatedEntity anno = field.getAnnotation(RelatedEntity.class);
+            Class<?> relationClass = anno.dependentEntityClass();
+            if (!Alice.reflectionTools.isEntityClass(relationClass)) {
+                throw new RuntimeException(String.format("Relation class %s is not an entity", relationClass));
+            }
+            Class<?> relatedEntity = field.getType();
+            if (!Alice.reflectionTools.isEntityClass(relatedEntity)) {
+                throw new NotEntityClassUsedInRelation(relatedEntity, field);
+            }
+        }
+    }
+
+    private void validateOneToManyFields(List<Field> oneToManyFields, Class<?> cls) {
+        for (Field field : oneToManyFields) {
+             validateFieldAndGetRelatedEntityClass(field);
+        }
+    }
+
+    private void validateManyToManyFields(List<Field> manyToManyFields, Class<?> cls) {
+        for (Field field : manyToManyFields) {
+            validateFieldAndGetRelatedEntityClass(field);
+        }
+    }
+
+    private boolean hasColumn(Class<?> relatedEntity, String columnName) {
+        List<Field> columnFields = extractColumnsFields(relatedEntity, false);
+        for (Field field : columnFields) {
+            Column column = field.getAnnotation(Column.class);
+            String name = column.value();
+            if (name.isEmpty()) {
+                continue;
+            }
+            if (name.equals(columnName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Validates relation field and returns the class of entity in relation
+     * @param field the field to validate
+     * @return the class of entity in relation
+     */
+    public Class<?> validateFieldAndGetRelatedEntityClass(Field field) {
+        Class<?> relatedEntity = getRelatedGenericClass(field);
+        if (!Alice.reflectionTools.isEntityClass(relatedEntity)) {
+            throw new NotEntityClassUsedInRelation(relatedEntity, field);
+        }
+        return relatedEntity;
+    }
+
+    public Class<?> getRelatedGenericClass(Field field) {
+        Class<?> relatedEntity = field.getType();
+        if (relatedEntity.isArray()) {
+            relatedEntity = relatedEntity.getComponentType();
+        } else if (!Collection.class.isAssignableFrom(relatedEntity)) {
+            throw new RuntimeException(String.format("Only arrays and %s can be used in OneToMany relations", Collection.class.getName()));
+        } else {
+            List<Class<?>> relationClasses = Alice.reflectionTools.getGenericClasses(field);
+            if (relationClasses.isEmpty()) {
+                throw new RuntimeException(String.format("Could not detect the type of related entities for field %s in class %s", field.getName(), field.getDeclaringClass()));
+            }
+            relatedEntity = relationClasses.get(0);
+        }
+        return relatedEntity;
     }
 
     public List<EntityDescriptor> generateDescriptorsFor(List<Class<?>> classes) {
@@ -635,5 +781,46 @@ public final class DatabaseTools {
             result.add(entityDescriptor);
         }
         return result;
+    }
+
+    /**
+     * Extracts the name of table for the entity
+     * @param cls class to check
+     * @param entityAnnotation the instance of {@link Entity} annotation for the given class
+     * @return the name of table for the entity
+     */
+    public <T> String getEntityTableName(Class<T> cls, Entity entityAnnotation) {
+        String tableName = entityAnnotation.tableName();
+        if (tableName.isEmpty()) {
+            tableName = cls.getSimpleName();
+        }
+        return tableName;
+    }
+
+    /**
+     * Extracts the name of table for the entity
+     * @param cls class to check
+     * @return the name of table for the entity or null if the given class is not an entity
+     */
+    public <T> String getEntityTableName(Class<T> cls) {
+        if (!Alice.reflectionTools.isEntityClass(cls)) {
+            return null;
+        }
+        return getEntityTableName(cls, cls.getAnnotation(Entity.class));
+    }
+
+    public Field getFieldForColumnName(String columnName, Class<?> entityClass) {
+        List<Field> fields = extractColumnsFields(entityClass, false);
+        for (Field field : fields) {
+            Column column = field.getAnnotation(Column.class);
+            String name = column.value();
+            if (name.isEmpty()) {
+                name = field.getName();
+            }
+            if (name.equals(columnName)) {
+                return field;
+            }
+        }
+        return null;
     }
 }

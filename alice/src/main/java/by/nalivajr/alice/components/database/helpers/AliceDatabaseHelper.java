@@ -6,11 +6,11 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
-import by.nalivajr.alice.components.database.models.Identifiable;
-import by.nalivajr.alice.tools.Alice;
-
 import java.util.LinkedList;
 import java.util.List;
+
+import by.nalivajr.alice.components.database.models.Identifiable;
+import by.nalivajr.alice.tools.Alice;
 
 /**
  * Created by Sergey Nalivko.
@@ -55,10 +55,14 @@ public abstract class AliceDatabaseHelper extends SQLiteOpenHelper {
     protected void executeScript(SQLiteDatabase db, String sql) {
         try {
             db.beginTransaction();
-            db.execSQL(sql);
+            String[] commands = sql.split(";");
+            for (String command: commands) {
+                db.execSQL(command);
+            }
             db.setTransactionSuccessful();
         } catch (Throwable e) {
             Log.e(TAG, "Could not execute script", e);
+            throw new RuntimeException(e);
         } finally {
             db.endTransaction();
         }

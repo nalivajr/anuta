@@ -4,12 +4,6 @@ import android.content.ContentResolver;
 import android.net.Uri;
 import android.provider.BaseColumns;
 
-import by.nalivajr.alice.annonatations.database.Column;
-import by.nalivajr.alice.annonatations.database.Entity;
-import by.nalivajr.alice.annonatations.database.Id;
-import by.nalivajr.alice.exceptions.NotAnnotatedEntityException;
-import by.nalivajr.alice.tools.Alice;
-
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -19,6 +13,15 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import by.nalivajr.alice.annonatations.database.Column;
+import by.nalivajr.alice.annonatations.database.Entity;
+import by.nalivajr.alice.annonatations.database.Id;
+import by.nalivajr.alice.annonatations.database.ManyToMany;
+import by.nalivajr.alice.annonatations.database.OneToMany;
+import by.nalivajr.alice.annonatations.database.RelatedEntity;
+import by.nalivajr.alice.exceptions.NotAnnotatedEntityException;
+import by.nalivajr.alice.tools.Alice;
 
 /**
  * Created by Sergey Nalivko.
@@ -38,7 +41,12 @@ public class EntityDescriptor {
 
     private List<Field> fields;
     private List<Field> indexFields;
+    private List<Field> entityRelatedFields;
+    private List<Field> oneToManyFields;
+    private List<Field> manyToManyFields;
+
     private Map<Field, ColumnDescriptor> fieldsToDescriptorMap;
+    private Map<Field, RelationDescriptor> fieldsToRelationDescriptorMap;
 
     public EntityDescriptor(Class<?> entityClass) {
         Alice.databaseTools.validateEntityClass(entityClass);
@@ -82,10 +90,7 @@ public class EntityDescriptor {
     }
 
     private void initTableName(Entity entityAnno) {
-        tableName = entityAnno.tableName();
-        if (tableName.isEmpty()) {
-            tableName = entityClass.getSimpleName();
-        }
+        tableName = Alice.databaseTools.getEntityTableName(entityClass, entityAnno);
     }
 
     private void initEntityName(Entity entityAnno) {
@@ -122,8 +127,11 @@ public class EntityDescriptor {
     }
 
     private void initMaps() {
+        initRelationsMap();
+
         fields = new ArrayList<Field>(Alice.databaseTools.extractFields(entityClass));
         indexFields = new ArrayList<Field>(fields.size());
+
         fieldsToDescriptorMap = new HashMap<Field, ColumnDescriptor>(fields.size());
         for (Field field : fields) {
             ColumnDescriptor columnDescriptor = new ColumnDescriptor(field);
@@ -135,6 +143,23 @@ public class EntityDescriptor {
         fields = Collections.unmodifiableList(fields);
         indexFields = Collections.unmodifiableList(indexFields);
         fieldsToDescriptorMap = Collections.unmodifiableMap(fieldsToDescriptorMap);
+    }
+
+    private void initRelationsMap() {
+        entityRelatedFields = Collections.unmodifiableList(Alice.reflectionTools.getFieldsAnnotatedWith(entityClass, RelatedEntity.class));
+        oneToManyFields = Collections.unmodifiableList(Alice.reflectionTools.getFieldsAnnotatedWith(entityClass, OneToMany.class));
+        manyToManyFields = Collections.unmodifiableList(Alice.reflectionTools.getFieldsAnnotatedWith(entityClass, ManyToMany.class));
+
+        fieldsToRelationDescriptorMap = new HashMap<Field, RelationDescriptor>();
+        buildDescriptiors(entityRelatedFields);
+        buildDescriptiors(oneToManyFields);
+        buildDescriptiors(manyToManyFields);
+    }
+
+    private void buildDescriptiors(List<Field> fields) {
+        for (Field field : fields) {
+            fieldsToRelationDescriptorMap.put(field, new RelationDescriptor(entityClass, field));
+        }
     }
 
     public Class<?> getEntityClass() {
@@ -199,5 +224,21 @@ public class EntityDescriptor {
 
     public Collection<ColumnDescriptor> getFieldDescriptors() {
         return fieldsToDescriptorMap.values();
+    }
+
+    public List<Field> getEntityRelatedFields() {
+        return entityRelatedFields;
+    }
+
+    public List<Field> getOneToManyFields() {
+        return oneToManyFields;
+    }
+
+    public List<Field> getManyToManyFields() {
+        return manyToManyFields;
+    }
+
+    public RelationDescriptor getRelationDescriptorForField(Field field) {
+        return fieldsToRelationDescriptorMap.get(field);
     }
 }

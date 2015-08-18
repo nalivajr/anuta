@@ -10,14 +10,15 @@ import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.util.Log;
 
-import by.nalivajr.alice.components.database.models.Identifiable;
-import by.nalivajr.alice.annonatations.database.Entity;
-import by.nalivajr.alice.components.database.helpers.AliceDatabaseHelper;
-import by.nalivajr.alice.exceptions.NotAnnotatedEntityException;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import by.nalivajr.alice.annonatations.database.Entity;
+import by.nalivajr.alice.components.database.helpers.AliceDatabaseHelper;
+import by.nalivajr.alice.components.database.models.Identifiable;
+import by.nalivajr.alice.exceptions.NotAnnotatedEntityException;
+import by.nalivajr.alice.tools.Alice;
 
 /**
  * Created by Sergey Nalivko.
@@ -163,10 +164,7 @@ public abstract class AliceContentProvider extends ContentProvider {
             if (annotation == null) {
                 throw new NotAnnotatedEntityException(cls);
             }
-            String tableName = annotation.tableName();
-            if (tableName.isEmpty()) {
-                tableName = cls.getSimpleName();
-            }
+            String tableName = Alice.databaseTools.getEntityTableName(cls, annotation);
             String authority = annotation.authority();
 
             String mimeTypeOne = String.format("vnd.android.cursor.item/vnd.%s.%s", authority, tableName);

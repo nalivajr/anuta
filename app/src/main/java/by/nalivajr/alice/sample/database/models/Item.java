@@ -2,9 +2,14 @@ package by.nalivajr.alice.sample.database.models;
 
 import android.provider.BaseColumns;
 
+import java.util.List;
+
 import by.nalivajr.alice.annonatations.database.Column;
 import by.nalivajr.alice.annonatations.database.Entity;
 import by.nalivajr.alice.annonatations.database.Id;
+import by.nalivajr.alice.annonatations.database.ManyToMany;
+import by.nalivajr.alice.annonatations.database.OneToMany;
+import by.nalivajr.alice.annonatations.database.RelatedEntity;
 import by.nalivajr.alice.components.database.models.Persistable;
 
 /**
@@ -14,7 +19,6 @@ import by.nalivajr.alice.components.database.models.Persistable;
 @Entity(name = "Item", tableName = "Item", authority = "authority")
 public class Item implements Persistable<String> {
 
-    @Id
     @Column("_id")
     private Long rowId;
 
@@ -24,6 +28,15 @@ public class Item implements Persistable<String> {
 
     @Column
     private String itemData  = "item-data";
+
+    @OneToMany(relationReferencedColumnName = "id")
+    private List<SubSubItem> subSubItemList;
+
+    @RelatedEntity(dependentEntityClass = SubSubItem.class)
+    private SubSubItem subSubItem;
+
+    @ManyToMany
+    private SubSubItem[] subSubItems;
 
     @Override
     public String getId() {

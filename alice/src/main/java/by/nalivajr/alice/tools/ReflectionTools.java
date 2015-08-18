@@ -2,12 +2,16 @@ package by.nalivajr.alice.tools;
 
 import android.util.Log;
 
-import by.nalivajr.alice.exceptions.EntityInstantiationException;
-
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+
+import by.nalivajr.alice.annonatations.database.Entity;
+import by.nalivajr.alice.exceptions.EntityInstantiationException;
 
 /**
  * Created by Sergey Nalivko.
@@ -87,5 +91,37 @@ public final class ReflectionTools {
             Log.e(TAG, "Illegal access exception during creating instance of " + entityClass.getName(), e);
             throw new EntityInstantiationException(entityClass, e);
         }
+    }
+
+    /**
+     * Returns the information about generic params
+     * @param field field with generic
+     * @return list of params, if they are present
+     */
+    public List<Class<?>> getGenericClasses(Field field) {
+        List<Class<?>> classes = new LinkedList<Class<?>>();
+
+        try {
+            Type type = field.getGenericType();
+            if (type instanceof ParameterizedType) {
+                ParameterizedType pt = (ParameterizedType) type;
+                for (Type ppt : pt.getActualTypeArguments()) {
+                    classes.add(((Class) ppt));
+                }
+            }
+        } catch (Throwable e) {
+            Log.w(TAG, "Could not extract generic type", e);
+            return classes;
+        }
+        return classes;
+    }
+
+    /**
+     * Checks whether the given class is entity class, which means it is annotated with {@link Entity} annotation
+     * @param cls the class to check
+     * @return true if class is annotated with {@link Entity} and false otherwise
+     */
+    public boolean isEntityClass(Class<?> cls) {
+        return cls.getAnnotation(Entity.class) != null;
     }
 }

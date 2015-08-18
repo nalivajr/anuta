@@ -2,12 +2,13 @@ package by.nalivajr.alice.sample.database;
 
 import android.database.sqlite.SQLiteDatabase;
 
-import by.nalivajr.alice.components.database.helpers.AliceRelationalDatabaseHelper;
-import by.nalivajr.alice.components.database.providers.AliceRelationalProvider;
-import by.nalivajr.alice.sample.database.models.SubSubItem;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import by.nalivajr.alice.components.database.helpers.AliceRelationalDatabaseHelper;
+import by.nalivajr.alice.components.database.providers.AliceRelationalProvider;
+import by.nalivajr.alice.sample.database.models.Item;
+import by.nalivajr.alice.sample.database.models.SubSubItem;
 
 /**
  * Created by Sergey Nalivko.
@@ -29,6 +30,7 @@ public class SampleProvider extends AliceRelationalProvider {
     public <T> List<Class<T>> getEntityClasses() {
         List<Class<T>> classes = new ArrayList<Class<T>>();
         classes.add((Class<T>) SubSubItem.class);
+        classes.add((Class<T>) Item.class);
         return classes;
     }
 }

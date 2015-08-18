@@ -1,15 +1,18 @@
 package by.nalivajr.alice.sample.database.models;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Date;
+import java.util.List;
+
 import by.nalivajr.alice.annonatations.database.Column;
 import by.nalivajr.alice.annonatations.database.Entity;
 import by.nalivajr.alice.annonatations.database.Id;
+import by.nalivajr.alice.annonatations.database.ManyToMany;
+import by.nalivajr.alice.annonatations.database.RelatedEntity;
 import by.nalivajr.alice.components.database.models.Identifiable;
 import by.nalivajr.alice.sample.database.Contract;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
 
 /**
  * Created by Sergey Nalivko.
@@ -27,6 +30,9 @@ public class SubSubItem extends SubItem implements Identifiable<String> {
     @Id
     @Column("subSubItemId")
     private String id;
+
+    @Column("id")
+    private String itemId;
 
     @Column
     private String subSubItemData;
@@ -102,6 +108,12 @@ public class SubSubItem extends SubItem implements Identifiable<String> {
 
     @Column(dataType = Column.DataType.JSON_STRING)
     private TestPojo testPojo = new TestPojo();
+
+    @RelatedEntity(dependentEntityClass = SubSubItem.class)
+    private Item parent;
+
+    @ManyToMany
+    private Collection<Item> items;
 
     @Override
     public String getId() {

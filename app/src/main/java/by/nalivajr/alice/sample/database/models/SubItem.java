@@ -13,7 +13,7 @@ import by.nalivajr.alice.components.database.models.Persistable;
  */
 @Entity(name = "SubItem", tableName = "SubItem", authority = "authority",
         inheritColumns = Entity.InheritancePolicy.SEQUENTIAL_NO_ID)
-public class SubItem extends Item implements Persistable<String> {
+public class SubItem implements Persistable<String> {
 
     @Id
     @Column("_id")
@@ -31,7 +31,6 @@ public class SubItem extends Item implements Persistable<String> {
         return id;
     }
 
-    @Override
     public void setId(String id) {
         this.id = id;
     }
