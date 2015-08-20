@@ -207,7 +207,7 @@ public final class AdapterTools {
     }
 
     private <T> AliceEntityCursor<T> createRelationalEntityCursor(final Context context, AliceQuery<T> query) {
-        final List<Class<?>> entityClasses = new ArrayList<>(1);
+        final List<Class<?>> entityClasses = new ArrayList<Class<?>>(1);
         entityClasses.add(query.getTargetClass());
 
         AliceEntityManager entityManager = new AliceRelationalEntityManager(context) {

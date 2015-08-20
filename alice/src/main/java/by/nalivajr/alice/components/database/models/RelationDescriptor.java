@@ -94,7 +94,7 @@ public class RelationDescriptor {
             relationColumnType = relationReferencedColumnType;
         }
         if (relationColumnType != relationReferencedColumnType) {
-            throw new DifferentDataTypesInRelationMappingException(entityClass, relationColumnName, relatedEntity, relationReferencedColumnName);
+            throw new DifferentDataTypesInRelationMappingException(entityClass, this.relationColumnName, relatedEntity, this.relationReferencedColumnName);
         }
 
         this.relatedEntity = relatedEntity;
@@ -153,13 +153,13 @@ public class RelationDescriptor {
         initRelationData(relationColumnName, relationReferencedColumnName, entityClass, relatedEntity);
         relationTable = anno.relationTableName();
         if (relationTable.isEmpty()) {
-            relationTable = buildRelationTableName(entityClass, relatedEntity);
+            relationTable = Alice.databaseTools.buildRelationTableName(entityClass, relatedEntity);
         }
         joinRelationColumnName = this.relationColumnName;
         joinReferencedRelationColumnName = this.relationReferencedColumnName;
         if (joinRelationColumnName.equals(joinReferencedRelationColumnName)) {
             joinRelationColumnName =  Alice.databaseTools.getEntityTableName(entityClass).toLowerCase() + relationColumnName;
-            joinReferencedRelationColumnName =  Alice.databaseTools.getEntityTableName(entityClass).toLowerCase() + relationReferencedColumnName;
+            joinReferencedRelationColumnName =  Alice.databaseTools.getEntityTableName(relatedEntity).toLowerCase() + relationReferencedColumnName;
         }
     }
 
@@ -201,18 +201,5 @@ public class RelationDescriptor {
 
     public Class<?> getRelationHoldingEntity() {
         return relationHoldingEntity;
-    }
-
-    /**
-     * Generates the name of many-to-many relation table for the given entities
-     * @return generated name of the table
-     */
-    private String buildRelationTableName(Class<?> entity1, Class<?> entity2) {
-        String entity1Table = Alice.databaseTools.getEntityTableName(entity1).toLowerCase();
-        String entity2Table = Alice.databaseTools.getEntityTableName(entity2).toLowerCase();
-
-        String first = entity1Table.compareTo(entity2Table) > 0 ? entity2Table : entity1Table;
-        String second = entity1Table.compareTo(entity2Table) > 0 ? entity1Table : entity2Table;
-        return String.format("%s_%s", first, second);
     }
 }

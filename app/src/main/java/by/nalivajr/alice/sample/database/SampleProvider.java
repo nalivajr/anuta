@@ -7,8 +7,11 @@ import java.util.List;
 
 import by.nalivajr.alice.components.database.helpers.AliceRelationalDatabaseHelper;
 import by.nalivajr.alice.components.database.providers.AliceRelationalProvider;
+import by.nalivajr.alice.sample.database.models.Game;
+import by.nalivajr.alice.sample.database.models.Group;
 import by.nalivajr.alice.sample.database.models.Item;
 import by.nalivajr.alice.sample.database.models.SubSubItem;
+import by.nalivajr.alice.sample.database.models.User;
 
 /**
  * Created by Sergey Nalivko.
@@ -31,6 +34,9 @@ public class SampleProvider extends AliceRelationalProvider {
         List<Class<T>> classes = new ArrayList<Class<T>>();
         classes.add((Class<T>) SubSubItem.class);
         classes.add((Class<T>) Item.class);
+        classes.add((Class<T>) User.class);
+        classes.add((Class<T>) Game.class);
+        classes.add((Class<T>) Group.class);
         return classes;
     }
 }

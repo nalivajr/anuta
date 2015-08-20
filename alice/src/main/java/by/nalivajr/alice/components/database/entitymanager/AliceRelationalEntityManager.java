@@ -6,18 +6,24 @@ import android.database.Cursor;
 import android.provider.BaseColumns;
 import android.util.Log;
 
-import by.nalivajr.alice.annonatations.database.Column;
-import by.nalivajr.alice.components.database.models.ColumnDescriptor;
-import by.nalivajr.alice.components.database.models.EntityDescriptor;
-import by.nalivajr.alice.components.database.models.SqliteDataType;
-import by.nalivajr.alice.tools.Alice;
-
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+
+import by.nalivajr.alice.annonatations.database.Column;
+import by.nalivajr.alice.components.database.models.ColumnDescriptor;
+import by.nalivajr.alice.components.database.models.EntityCache;
+import by.nalivajr.alice.components.database.models.EntityDescriptor;
+import by.nalivajr.alice.components.database.models.RelationQueryDescriptor;
+import by.nalivajr.alice.components.database.models.SimpleEntityCache;
+import by.nalivajr.alice.components.database.models.SqliteDataType;
+import by.nalivajr.alice.components.database.query.AliceQuery;
+import by.nalivajr.alice.tools.Alice;
 
 /**
  * Created by Sergey Nalivko.
@@ -35,6 +41,23 @@ public abstract class AliceRelationalEntityManager extends AbstractEntityManager
     protected <T> String[] getProjection(Class<T> entityClass) {
         Set<String> columns = entityToDescriptor.get(entityClass).getFieldKeys();
         return columns.toArray(new String[columns.size()]);
+    }
+
+    @Override
+    protected <T> ContentValues convertToContentValues(T entity) {
+        EntityDescriptor entityDescriptor = entityToDescriptor.get(entity.getClass());
+        List<Field> fields = entityDescriptor.getFields();
+        ContentValues contentValues = new ContentValues();
+        for (Field field : fields) {
+            String key = entityDescriptor.getFieldKey(field);
+            if (key.equals(BaseColumns._ID)) {
+                continue;
+            }
+            Column.DataType dataType = entityDescriptor.getFieldDescriptor(field).getColumnPersistingDataTypeStrategy();
+            Object val = Alice.databaseTools.getFieldValue(field, dataType, entity);
+            Alice.databaseTools.putValue(contentValues, key, val);
+        }
+        return contentValues;
     }
 
     @Override
@@ -78,6 +101,18 @@ public abstract class AliceRelationalEntityManager extends AbstractEntityManager
     private <T> T cursorToEntity(Class<T> entityClass, Cursor cursor, Collection<ColumnDescriptor> columns) {
         long rowId = cursor.getLong(cursor.getColumnIndex(BaseColumns._ID));
 
+        boolean cacheCreator = false;
+        EntityCache cache = entityCache.get();
+        if (cache == null) {
+            cache = new SimpleEntityCache();
+            entityCache.set(cache);
+            cacheCreator = true;
+        }
+        T entityFromCache = cache.getByRowId(entityClass, rowId);
+        if (entityFromCache != null) {
+            return entityFromCache;
+        }
+
         T entity = createEntity(entityClass);
         for (ColumnDescriptor column : columns) {
             SqliteDataType type = column.getSqlLiteDataType();
@@ -99,23 +134,53 @@ public abstract class AliceRelationalEntityManager extends AbstractEntityManager
             Alice.reflectionTools.setValue(column.getField(), entity, converted);
         }
         setEntityRowId(entity, rowId);
+        cache.put(entity, rowId);
+
+        loadRelatedObjects(entityClass, cursor, entity);
+
+        if (cacheCreator){
+            cache.clear();
+            entityCache.remove();
+        }
         return entity;
     }
 
-    @Override
-    protected <T> ContentValues convertToContentValues(T entity) {
-        EntityDescriptor entityDescriptor = entityToDescriptor.get(entity.getClass());
-        List<Field> fields = entityDescriptor.getFields();
-        ContentValues contentValues = new ContentValues();
+    private <T> void loadRelatedObjects(Class<T> entityClass, Cursor cursor, T entity) {
+        EntityDescriptor descriptor = entityToDescriptor.get(entityClass);
+        List<Field> fields = descriptor.getEntityRelatedFields();
         for (Field field : fields) {
-            String key = entityDescriptor.getFieldKey(field);
-            if (key.equals(BaseColumns._ID)) {
-                continue;
+            List related = getRelatedObjectList(cursor, descriptor, field);
+            if (related != null && !related.isEmpty()) {
+                Alice.reflectionTools.setValue(field, entity, related.get(0));
             }
-            Column.DataType dataType = entityDescriptor.getFieldDescriptor(field).getColumnPersistingDataTypeStrategy();
-            Object val = Alice.databaseTools.getFieldValue(field, dataType, entity);
-            Alice.databaseTools.putValue(contentValues, key, val);
         }
-        return contentValues;
+
+        fields = descriptor.getOneToManyFields();
+        loadAndBindCollection(cursor, entity, descriptor, fields);
+
+        fields = descriptor.getManyToManyFields();
+        loadAndBindCollection(cursor, entity, descriptor, fields);
+    }
+
+    private List getRelatedObjectList(Cursor cursor, EntityDescriptor descriptor, Field field) {
+        RelationQueryDescriptor queryDescriptor = descriptor.getRelationQueryDescriptorForField(field);
+        AliceQuery query = queryDescriptor.buildQuery(getContext().getContentResolver(), cursor);
+        return findByQuery(query);
+    }
+
+    private <T> void loadAndBindCollection(Cursor cursor, T entity, EntityDescriptor descriptor, List<Field> fields) {
+        for (Field field : fields) {
+            List related = getRelatedObjectList(cursor, descriptor, field);
+            Class type = (Class) field.getType();
+            if (Set.class.isAssignableFrom(type)) {
+                Alice.reflectionTools.setValue(field, entity, new HashSet(related));
+            } else if (type.isArray()) {
+                Alice.reflectionTools.setValue(field, entity, Array.newInstance(type.getComponentType(), related.size()));
+            } else if (List.class.isAssignableFrom(type) || Collection.class.isAssignableFrom(type)) {
+                Alice.reflectionTools.setValue(field, entity, related);
+            } else {
+                throw new RuntimeException("Could not load entities to unknown collection " + type.getName());
+            }
+        }
     }
 }

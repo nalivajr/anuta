@@ -26,6 +26,7 @@ import java.util.Map;
 
 import by.nalivajr.alice.components.database.cursor.AliceBaseEntityCursor;
 import by.nalivajr.alice.components.database.cursor.AliceEntityCursor;
+import by.nalivajr.alice.components.database.models.EntityCache;
 import by.nalivajr.alice.components.database.models.EntityDescriptor;
 import by.nalivajr.alice.components.database.models.Persistable;
 import by.nalivajr.alice.components.database.query.AliceQuery;
@@ -48,6 +49,7 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
     private Context context;
     private HashSet<Class<?>> entitiesSet;
     protected Map<Class<?>, EntityDescriptor> entityToDescriptor;
+    protected ThreadLocal<EntityCache> entityCache;
 
     public AbstractEntityManager(Context context) {
         this.context = context;
@@ -58,6 +60,7 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
             entityToDescriptor.put(descriptor.getEntityClass(), descriptor);
         }
         entitiesSet = new HashSet<Class<?>>(entityClasses);
+        entityCache = new ThreadLocal<EntityCache>();
     }
 
     /**
@@ -107,6 +110,9 @@ public abstract class AbstractEntityManager implements AliceEntityManager {
         String idColumn = getIdColumnName(entityClass);
 
         Cursor cursor = getContext().getContentResolver().query(uri, getProjectionWithRowId(entityClass), idColumn + "=?", new String[]{id}, null);
+        if (!cursor.moveToFirst()) {
+            return null;
+        }
         T result = cursorToEntity(entityClass, cursor);
         cursor.close();
         return result;

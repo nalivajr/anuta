@@ -11,12 +11,13 @@ import by.nalivajr.alice.annonatations.database.ManyToMany;
 import by.nalivajr.alice.annonatations.database.OneToMany;
 import by.nalivajr.alice.annonatations.database.RelatedEntity;
 import by.nalivajr.alice.components.database.models.Persistable;
+import by.nalivajr.alice.sample.database.Contract;
 
 /**
  * Created by Sergey Nalivko.
  * email: snalivko93@gmail.com
  */
-@Entity(name = "Item", tableName = "Item", authority = "authority")
+@Entity(name = "Item", tableName = "Item", authority = Contract.AUTHORITY)
 public class Item implements Persistable<String> {
 
     @Column("_id")

@@ -166,22 +166,31 @@ public abstract class AliceContentProvider extends ContentProvider {
             }
             String tableName = Alice.databaseTools.getEntityTableName(cls, annotation);
             String authority = annotation.authority();
+            code = getAddMatherAndReturnCode(step, code, tableName, authority);
 
-            String mimeTypeOne = String.format("vnd.android.cursor.item/vnd.%s.%s", authority, tableName);
-            uriMatcher.addURI(authority, tableName, code++);
-            uriToTableName.put(mimeTypeOne, tableName);
-            mimeCodeToMimeType.put(code, mimeTypeOne);
-            Log.i(TAG, String.format("Mapping %s to MIME type %s with code %d", tableName, mimeTypeOne, code));
-
-            String mimeTypeMany = String.format("vnd.android.cursor.dir/vnd.%s.%s", authority, tableName);
-            uriMatcher.addURI(authority, tableName, code++);
-            uriToTableName.put(mimeTypeMany, tableName);
-            mimeCodeToMimeType.put(code, mimeTypeMany);
-            Log.i(TAG, String.format("Mapping %s to MIME type %s with code %d", tableName, mimeTypeMany, code));
-
-            tableNameToAuthority.put(tableName, authority);
-            code = (code / step + 1) * step;
+            List<String> relatedTables = Alice.databaseTools.getRelatedTablesNames(cls);
+            for (String relatedTable : relatedTables) {
+                code = getAddMatherAndReturnCode(step, code, relatedTable, authority);
+            }
         }
+    }
+
+    private int getAddMatherAndReturnCode(int step, int code, String tableName, String authority) {
+        String mimeTypeOne = String.format("vnd.android.cursor.item/vnd.%s.%s", authority, tableName);
+        uriMatcher.addURI(authority, tableName, code++);
+        uriToTableName.put(mimeTypeOne, tableName);
+        mimeCodeToMimeType.put(code, mimeTypeOne);
+        Log.i(TAG, String.format("Mapping %s to MIME type %s with code %d", tableName, mimeTypeOne, code));
+
+        String mimeTypeMany = String.format("vnd.android.cursor.dir/vnd.%s.%s", authority, tableName);
+        uriMatcher.addURI(authority, tableName, code++);
+        uriToTableName.put(mimeTypeMany, tableName);
+        mimeCodeToMimeType.put(code, mimeTypeMany);
+        Log.i(TAG, String.format("Mapping %s to MIME type %s with code %d", tableName, mimeTypeMany, code));
+
+        tableNameToAuthority.put(tableName, authority);
+        code = (code / step + 1) * step;
+        return code;
     }
 
     protected void notifyObservers(Uri uri) {

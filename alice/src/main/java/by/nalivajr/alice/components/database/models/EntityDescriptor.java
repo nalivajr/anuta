@@ -1,6 +1,5 @@
 package by.nalivajr.alice.components.database.models;
 
-import android.content.ContentResolver;
 import android.net.Uri;
 import android.provider.BaseColumns;
 
@@ -47,6 +46,7 @@ public class EntityDescriptor {
 
     private Map<Field, ColumnDescriptor> fieldsToDescriptorMap;
     private Map<Field, RelationDescriptor> fieldsToRelationDescriptorMap;
+    private Map<Field, RelationQueryDescriptor> fieldsToRelationQueryDescriptorMap;
 
     public EntityDescriptor(Class<?> entityClass) {
         Alice.databaseTools.validateEntityClass(entityClass);
@@ -103,11 +103,7 @@ public class EntityDescriptor {
     private void initAuthorityAndUri(Entity entityAnno) {
         authority = entityAnno.authority();
 
-        tableUri = new Uri.Builder()
-                .scheme(ContentResolver.SCHEME_CONTENT)
-                .authority(authority)
-                .appendPath(tableName)
-                .build();
+        tableUri = Alice.databaseTools.buildUriForTableName(tableName, authority);
     }
 
     private void initIdColumnName() {
@@ -151,14 +147,22 @@ public class EntityDescriptor {
         manyToManyFields = Collections.unmodifiableList(Alice.reflectionTools.getFieldsAnnotatedWith(entityClass, ManyToMany.class));
 
         fieldsToRelationDescriptorMap = new HashMap<Field, RelationDescriptor>();
+        fieldsToRelationQueryDescriptorMap = new HashMap<Field, RelationQueryDescriptor>();
+
         buildDescriptiors(entityRelatedFields);
         buildDescriptiors(oneToManyFields);
         buildDescriptiors(manyToManyFields);
+
+        fieldsToRelationDescriptorMap = Collections.unmodifiableMap(fieldsToRelationDescriptorMap);
+        fieldsToRelationQueryDescriptorMap = Collections.unmodifiableMap(fieldsToRelationQueryDescriptorMap);
     }
 
     private void buildDescriptiors(List<Field> fields) {
         for (Field field : fields) {
-            fieldsToRelationDescriptorMap.put(field, new RelationDescriptor(entityClass, field));
+            RelationDescriptor relationDescriptor = new RelationDescriptor(entityClass, field);
+            fieldsToRelationDescriptorMap.put(field, relationDescriptor);
+            RelationQueryDescriptor queryDescriptor = new RelationQueryDescriptor(relationDescriptor.getRelatedEntity(), relationDescriptor);
+            fieldsToRelationQueryDescriptorMap.put(field, queryDescriptor);
         }
     }
 
@@ -241,4 +245,10 @@ public class EntityDescriptor {
     public RelationDescriptor getRelationDescriptorForField(Field field) {
         return fieldsToRelationDescriptorMap.get(field);
     }
+
+    public RelationQueryDescriptor getRelationQueryDescriptorForField(Field field) {
+        return fieldsToRelationQueryDescriptorMap.get(field);
+    }
+
+
 }

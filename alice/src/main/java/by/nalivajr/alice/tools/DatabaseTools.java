@@ -1,6 +1,8 @@
 package by.nalivajr.alice.tools;
 
+import android.content.ContentResolver;
 import android.content.ContentValues;
+import android.net.Uri;
 import android.provider.BaseColumns;
 import android.util.Log;
 
@@ -15,6 +17,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -822,5 +825,44 @@ public final class DatabaseTools {
             }
         }
         return null;
+    }
+
+    public List<String> getRelatedTablesNames(Class<?> cls) {
+        List<String> tables = new LinkedList<String>();
+        Field[] fields = cls.getDeclaredFields();
+        for (Field field : fields) {
+            ManyToMany anno = field.getAnnotation(ManyToMany.class);
+            if (anno == null) {
+                continue;
+            }
+            String tableName = anno.relationTableName();
+            if (tableName.isEmpty()) {
+                Class<?> related = getRelatedGenericClass(field);
+                tableName = Alice.databaseTools.buildRelationTableName(cls, related);
+            }
+            tables.add(tableName);
+        }
+        return tables;
+    }
+
+    /**
+     * Generates the name of many-to-many relation table for the given entities
+     * @return generated name of the table
+     */
+    public String buildRelationTableName(Class<?> entity1, Class<?> entity2) {
+        String entity1Table = getEntityTableName(entity1).toLowerCase();
+        String entity2Table = getEntityTableName(entity2).toLowerCase();
+
+        String first = entity1Table.compareTo(entity2Table) > 0 ? entity2Table : entity1Table;
+        String second = entity1Table.compareTo(entity2Table) > 0 ? entity1Table : entity2Table;
+        return String.format("%s_%s", first, second);
+    }
+
+    public Uri buildUriForTableName(String tableName, String authority) {
+        return new Uri.Builder()
+                .scheme(ContentResolver.SCHEME_CONTENT)
+                .authority(authority)
+                .appendPath(tableName)
+                .build();
     }
 }

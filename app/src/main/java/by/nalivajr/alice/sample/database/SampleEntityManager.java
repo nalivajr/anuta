@@ -6,8 +6,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import by.nalivajr.alice.components.database.entitymanager.AliceRelationalEntityManager;
+import by.nalivajr.alice.sample.database.models.Game;
+import by.nalivajr.alice.sample.database.models.Group;
 import by.nalivajr.alice.sample.database.models.Item;
 import by.nalivajr.alice.sample.database.models.SubSubItem;
+import by.nalivajr.alice.sample.database.models.User;
 
 /**
  * Created by Sergey Nalivko.
@@ -23,6 +26,9 @@ public class SampleEntityManager extends AliceRelationalEntityManager {
         List<Class<?>> list = new ArrayList<Class<?>>();
         list.add(SubSubItem.class);
         list.add(Item.class);
+        list.add(Game.class);
+        list.add(User.class);
+        list.add(Group.class);
         return list;
     }
 }

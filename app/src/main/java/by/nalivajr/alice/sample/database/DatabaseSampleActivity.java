@@ -30,6 +30,7 @@ import by.nalivajr.alice.components.database.query.BaseAliceQueryBuilder;
 import by.nalivajr.alice.components.execution.SingleThreadActionExecutor;
 import by.nalivajr.alice.sample.R;
 import by.nalivajr.alice.sample.database.models.SubSubItem;
+import by.nalivajr.alice.sample.database.models.User;
 import by.nalivajr.alice.tools.Alice;
 
 /**
@@ -69,6 +70,9 @@ public class DatabaseSampleActivity extends Activity {
 
     @InnerView(R.id.rb_toggle_list)
     private CheckBox toggleListBtn;
+
+    @InnerView(R.id.btn_init_relations_sample)
+    private Button initRelationSample;
 
     private AliceEntityManager entityManager;
     private SingleThreadActionExecutor executor = new SingleThreadActionExecutor();
@@ -169,6 +173,16 @@ public class DatabaseSampleActivity extends Activity {
                 onDeleteClicked();
             }
         });
+
+        initRelationSample.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                long start = System.currentTimeMillis();
+                User user = entityManager.find(User.class, "1");
+                long end = System.currentTimeMillis();
+                Toast.makeText(DatabaseSampleActivity.this, String.format("To read %s millis", (end - start)), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     protected void onFindClicked() {
@@ -264,7 +278,7 @@ public class DatabaseSampleActivity extends Activity {
                     ContentValues contentValues = new ContentValues();
                     contentValues.put("subSubItemData", "Updated at " + System.currentTimeMillis());
 
-                    BaseAliceQueryBuilder<SubSubItem> queryBuilder = new BaseAliceQueryBuilder<>(SubSubItem.class);
+                    BaseAliceQueryBuilder<SubSubItem> queryBuilder = new BaseAliceQueryBuilder<SubSubItem>(SubSubItem.class);
                     AliceQuery<SubSubItem> query = queryBuilder.buildUpdate(contentValues);
                     start = System.currentTimeMillis();
                     entityManager.executeQuery(query);
@@ -292,7 +306,7 @@ public class DatabaseSampleActivity extends Activity {
                     amount = String.valueOf(subSubItemsList.size());
                     subSubItemsList.clear();
                 } else {
-                    BaseAliceQueryBuilder<SubSubItem> queryBuilder = new BaseAliceQueryBuilder<>(SubSubItem.class);
+                    BaseAliceQueryBuilder<SubSubItem> queryBuilder = new BaseAliceQueryBuilder<SubSubItem>(SubSubItem.class);
                     AliceQuery<SubSubItem> query = queryBuilder.buildDelete();
                     start = System.currentTimeMillis();
                     entityManager.executeQuery(query);
