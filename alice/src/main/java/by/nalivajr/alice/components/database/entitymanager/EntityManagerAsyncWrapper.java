@@ -159,6 +159,36 @@ public class EntityManagerAsyncWrapper implements AliceAsyncEntityManager {
     }
 
     @Override
+    public <T> void getPlainEntity(final Class<T> entityClass, final String id, ActionCallback<T> callback) {
+        executorService.submit(createTask(new Callable<T>() {
+            @Override
+            public T call() throws Exception {
+                return entityManager.getPlainEntity(entityClass, id);
+            }
+        }, callback));
+    }
+
+    @Override
+    public <T> void initialize(final T entity, ActionCallback<T> callback) {
+        executorService.submit(createTask(new Callable<T>() {
+            @Override
+            public T call() throws Exception {
+                return entityManager.initialize(entity);
+            }
+        }, callback));
+    }
+
+    @Override
+    public <T> void initialize(final T entity, final int level, ActionCallback<T> callback) {
+        executorService.submit(createTask(new Callable<T>() {
+            @Override
+            public T call() throws Exception {
+                return entityManager.initialize(entity, level);
+            }
+        }, callback));
+    }
+
+    @Override
     public <T> T save(T entity) {
         return entityManager.save(entity);
     }
@@ -221,6 +251,21 @@ public class EntityManagerAsyncWrapper implements AliceAsyncEntityManager {
     @Override
     public <T> AliceEntityCursor<T> getEntityCursor(AliceQuery<T> query) {
         return entityManager.getEntityCursor(query);
+    }
+
+    @Override
+    public <T> T getPlainEntity(Class<T> entityClass, String id) {
+        return entityManager.getPlainEntity(entityClass, id);
+    }
+
+    @Override
+    public <T> T initialize(T entity) {
+        return entityManager.initialize(entity);
+    }
+
+    @Override
+    public <T> T initialize(T entity, int level) {
+        return entityManager.initialize(entity, level);
     }
 
     @Override

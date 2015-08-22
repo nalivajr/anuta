@@ -35,4 +35,9 @@ public @interface ManyToMany {
      * @return the name of relation table
      */
     public String relationTableName() default "";
+
+    /**
+     * Specifies the strategy of data loading. If lazy that related entities collection won't be loaded
+     */
+    public boolean lazyFetch() default true;
 }

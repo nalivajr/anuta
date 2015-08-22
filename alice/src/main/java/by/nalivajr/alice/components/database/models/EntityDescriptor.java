@@ -246,6 +246,10 @@ public class EntityDescriptor {
         return fieldsToRelationDescriptorMap.get(field);
     }
 
+    public Set<RelationDescriptor> getRelationDescriptors() {
+        return new HashSet<RelationDescriptor>(fieldsToRelationDescriptorMap.values());
+    }
+
     public RelationQueryDescriptor getRelationQueryDescriptorForField(Field field) {
         return fieldsToRelationQueryDescriptorMap.get(field);
     }

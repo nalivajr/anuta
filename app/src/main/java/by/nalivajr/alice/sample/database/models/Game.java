@@ -31,4 +31,36 @@ public class Game {
 
     @ManyToMany
     private Group[] fanGroups;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public User getCreator() {
+        return creator;
+    }
+
+    public void setCreator(User creator) {
+        this.creator = creator;
+    }
+
+    public Group getOfficialGroup() {
+        return officialGroup;
+    }
+
+    public void setOfficialGroup(Group officialGroup) {
+        this.officialGroup = officialGroup;
+    }
+
+    public Group[] getFanGroups() {
+        return fanGroups;
+    }
+
+    public void setFanGroups(Group[] fanGroups) {
+        this.fanGroups = fanGroups;
+    }
 }

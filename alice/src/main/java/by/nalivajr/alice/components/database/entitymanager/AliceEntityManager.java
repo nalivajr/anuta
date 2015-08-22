@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.List;
 
 import by.nalivajr.alice.components.database.cursor.AliceEntityCursor;
+import by.nalivajr.alice.components.database.models.DatabaseAccessSession;
 import by.nalivajr.alice.components.database.query.AliceQuery;
 import by.nalivajr.alice.components.database.query.AliceQueryBuilder;
 
@@ -29,6 +30,14 @@ public interface AliceEntityManager {
      * @return Java object, representing the entity if object was found and null otherwise
      */
     public <T> T find(Class<T> entityClass, String id);
+
+
+    /**
+     * Loads entity without loading all inner collections
+     * @param id the id of the entity
+     * @return loaded entity, if exists and null otherwise
+     */
+    public <T> T getPlainEntity(Class<T> entityClass, String id);
 
     /**
      * Updates entity in database
@@ -116,4 +125,24 @@ public interface AliceEntityManager {
      * @return {@code true} if query was executed successfully and {@code false} otherwise
      */
     public <T> boolean executeQuery(AliceQuery<T> query);
+
+    /**
+     * Initializes all related collections and entities
+     * @param entity the entity to be initialized
+     * @return initialized entity. WARNING! The reference of returned object will differ from passed at params
+     */
+    public <T> T initialize(T entity);
+
+    /**
+     * Initializes all related collections and entities up to the given level
+     * @param entity the entity to be initialized
+     * @param level the level of initialization (greater then 0 or one of the following)
+     *              <ul>
+     *              <li>{@link DatabaseAccessSession#LEVEL_ENTITY_ONLY} - to load plain entity</li>
+     *              <li>{@link DatabaseAccessSession#LEVEL_ALL} - to load entity and all dependent collections</li>
+     *              <li>{@link DatabaseAccessSession#LEVEL_ANNOTATION_BASED} - to load entity and collections will be loaded accorging to annotation config</li>
+     *              </ul>
+     * @return initialized entity. WARNING! The reference of returned object will differ from passed at params
+     */
+    public <T> T initialize(T entity, int level);
 }

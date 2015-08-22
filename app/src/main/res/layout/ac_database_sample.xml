@@ -129,9 +129,9 @@
 
         <Button
             android:id="@+id/btn_init_relations_sample"
-            android:layout_width="wrap_content"
+            android:layout_width="400dp"
             android:layout_height="wrap_content"
-            android:text="Init"/>
+            android:text="Run relation test"/>
 
     </LinearLayout>
 

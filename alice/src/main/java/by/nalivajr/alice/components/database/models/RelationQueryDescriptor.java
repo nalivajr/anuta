@@ -50,6 +50,7 @@ public class RelationQueryDescriptor<T> {
     public AliceQuery<T> buildQuery(ContentResolver resolver, Cursor parentEntity) {
         AliceQueryBuilder<T> queryBuilder = new BaseAliceQueryBuilder<T>(relatedEntity);
 
+        int specifiedParams = 0;
         for (String param : params) {
             String[] values = extractArgs(resolver, parentEntity);
             if (values.length == 0) {   //if args are empty
@@ -58,8 +59,9 @@ public class RelationQueryDescriptor<T> {
             queryBuilder.or(
                     queryBuilder.in(param, values)
             );
+            specifiedParams++;
         }
-        return queryBuilder.build();
+        return specifiedParams > 0 ? queryBuilder.build() : null;
     }
 
     private String[] extractArgs(ContentResolver resolver, Cursor rootEntityCursor) {
@@ -86,9 +88,7 @@ public class RelationQueryDescriptor<T> {
     }
 
     private void extarctFromCursor(List<String> args, Cursor cursor) {
-        if (cursor == null || !cursor.moveToFirst()) {
-            args.add("-1"); //to avoid no-arg issue
-        } else {
+        if (cursor != null && cursor.moveToFirst()) {
             do {
                 args.add(cursor.getString(0));
             } while (cursor.moveToNext());

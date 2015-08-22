@@ -5,6 +5,7 @@ import java.util.List;
 
 import by.nalivajr.alice.callbacks.execution.ActionCallback;
 import by.nalivajr.alice.components.database.cursor.AliceEntityCursor;
+import by.nalivajr.alice.components.database.models.DatabaseAccessSession;
 import by.nalivajr.alice.components.database.query.AliceQuery;
 
 /**
@@ -38,6 +39,34 @@ public interface AliceAsyncEntityManager extends AliceEntityManager {
     <T> void getEntityCursor(AliceQuery<T> query, ActionCallback<AliceEntityCursor<T>> callback);
 
     <T> void executeQuery(AliceQuery<T> query, ActionCallback<Boolean> callback);
+
+    /**
+     * Loads entity without loading all inner collections
+     * @param id the id of the entity
+     * @param callback the callback to pass loaded entity, if exists and null otherwise
+     */
+    public <T> void getPlainEntity(Class<T> entityClass, String id, ActionCallback<T> callback);
+
+
+    /**
+     * Initializes all related collections and entities
+     * @param entity the entity to be initialized
+     * @param callback the callback to pass initialized entity as result. WARNING! The reference of returned object will differ from passed at params
+     */
+    public <T> void initialize(T entity, ActionCallback<T> callback);
+
+    /**
+     * Initializes all related collections and entities up to the given level
+     * @param entity the entity to be initialized
+     * @param level the level of initialization (greater then 0 or one of the following)
+     *              <ul>
+     *              <li>{@link DatabaseAccessSession#LEVEL_ENTITY_ONLY} - to load plain entity</li>
+     *              <li>{@link DatabaseAccessSession#LEVEL_ALL} - to load entity and all dependent collections</li>
+     *              <li>{@link DatabaseAccessSession#LEVEL_ANNOTATION_BASED} - to load entity and collections will be loaded accorging to annotation config</li>
+     *              </ul>
+     * @param callback the callback to pass initialized entity as result. WARNING! The reference of returned object will differ from passed at params
+     */
+    public <T> void initialize(T entity, int level, ActionCallback<T> callback);
 
     void cancelAll();
 }

@@ -28,4 +28,9 @@ public @interface OneToMany {
      * @return the name of column in relation.
      */
     public String relationColumnName() default "";
+
+    /**
+     * Specifies the strategy of data loading. If lazy that related entities collection won't be loaded
+     */
+    public boolean lazyFetch() default true;
 }

@@ -27,21 +27,25 @@ public class RelationDescriptor {
     private SqliteDataType relationReferencedColumnType;
     private Class<?> relatedEntity;
     private Class<?> relationHoldingEntity;
+    private boolean lazyFetch;
 
     public RelationDescriptor(Class<?> entityClass, Field field) {
         RelatedEntity otoAnno = field.getAnnotation(RelatedEntity.class);
         if (otoAnno != null) {
             buildOnRelatedEntity(otoAnno, field, entityClass);
+            lazyFetch = otoAnno.lazyFetch();
             return;
         }
         OneToMany otmAnno = field.getAnnotation(OneToMany.class);
         if (otmAnno != null) {
             buildOnOneToMany(otmAnno, field, entityClass);
+            lazyFetch = otmAnno.lazyFetch();
             return;
         }
         ManyToMany mtmAnno = field.getAnnotation(ManyToMany.class);
         if (mtmAnno != null) {
             buildOnManyToMany(mtmAnno, field, entityClass);
+            lazyFetch = mtmAnno.lazyFetch();
         }
     }
 
@@ -127,6 +131,9 @@ public class RelationDescriptor {
         relationHoldingEntity = relationClass;
         relationType = RelationType.RELATED_ENTITY;
         initRelationData(anno.relationColumnName(), anno.relationReferencedColumnName(), entityClass, relatedEntity);
+        if (relationHoldingEntity == entityClass) {
+            relationColumnName = joinRelationColumnName;
+        }
     }
 
     private void buildOnOneToMany(OneToMany anno, Field field, Class<?> entityClass) {
@@ -201,5 +208,9 @@ public class RelationDescriptor {
 
     public Class<?> getRelationHoldingEntity() {
         return relationHoldingEntity;
+    }
+
+    public boolean isLazyFetch() {
+        return lazyFetch;
     }
 }

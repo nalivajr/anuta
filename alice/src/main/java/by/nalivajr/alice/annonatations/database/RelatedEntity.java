@@ -28,4 +28,9 @@ public @interface RelatedEntity {
      * Specifies the class of entity, which has foreign key column
      */
     public Class<?> dependentEntityClass();
+
+    /**
+     * Specifies the strategy of data loading. If lazy that related entity won't be loaded
+     */
+    public boolean lazyFetch() default true;
 }

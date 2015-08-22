@@ -52,4 +52,10 @@ public class SimpleEntityCache implements EntityCache {
     public void clear() {
         cacheMap.clear();
     }
+
+    @Override
+    public boolean containsEntity(Class<?> entityClass, Long rowId) {
+        Map<Long, Object> entityMap = cacheMap.get(entityClass);
+        return entityMap != null && entityMap.containsKey(rowId);
+    }
 }

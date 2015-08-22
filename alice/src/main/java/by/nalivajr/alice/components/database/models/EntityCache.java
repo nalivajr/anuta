@@ -30,4 +30,12 @@ public interface EntityCache {
      * Clears the cache
      */
     void clear();
+
+    /**
+     * Checks whether the entity with the given Id already in cache
+     * @param entityClass the class of entity
+     * @param rowId the {@link android.provider.BaseColumns#_ID} of entity
+     * @return {@code true} if entity is in cache and false otherwise
+     */
+    boolean containsEntity(Class<?> entityClass, Long rowId);
 }

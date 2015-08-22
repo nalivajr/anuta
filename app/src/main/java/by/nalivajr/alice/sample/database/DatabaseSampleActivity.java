@@ -14,6 +14,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.Callable;
 
@@ -29,6 +31,8 @@ import by.nalivajr.alice.components.database.query.AliceQueryBuilder;
 import by.nalivajr.alice.components.database.query.BaseAliceQueryBuilder;
 import by.nalivajr.alice.components.execution.SingleThreadActionExecutor;
 import by.nalivajr.alice.sample.R;
+import by.nalivajr.alice.sample.database.models.Game;
+import by.nalivajr.alice.sample.database.models.Group;
 import by.nalivajr.alice.sample.database.models.SubSubItem;
 import by.nalivajr.alice.sample.database.models.User;
 import by.nalivajr.alice.tools.Alice;
@@ -177,10 +181,7 @@ public class DatabaseSampleActivity extends Activity {
         initRelationSample.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                long start = System.currentTimeMillis();
-                User user = entityManager.find(User.class, "1");
-                long end = System.currentTimeMillis();
-                Toast.makeText(DatabaseSampleActivity.this, String.format("To read %s millis", (end - start)), Toast.LENGTH_SHORT).show();
+                onRunRelationTestClicked();
             }
         });
     }
@@ -318,7 +319,28 @@ public class DatabaseSampleActivity extends Activity {
         }, callback);
     }
 
-    @NonNull
+    protected void onRunRelationTestClicked() {
+        User user = createTestUser();
+
+        long saveStart = System.currentTimeMillis();
+        user = entityManager.save(user);
+        long saveEnd = System.currentTimeMillis();
+
+        long refStart = System.currentTimeMillis();
+        user = entityManager.getPlainEntity(User.class, String.valueOf(user.getId()));
+        long refEnd = System.currentTimeMillis();
+
+        long initStart = System.currentTimeMillis();
+        user = entityManager.initialize(user);
+        long initEnd = System.currentTimeMillis();
+
+        Toast.makeText(DatabaseSampleActivity.this, String.format("Saved in: %s millis.\nRef loaded in: %s.\nInitialized in: %s",
+                        (saveEnd - saveStart),
+                        (refEnd - refStart),
+                        (initEnd - initStart)),
+                Toast.LENGTH_LONG).show();
+    }
+
     private AbstractUiOnlyCallback<Pair<String, Long>> createCallback(final String format) {
         return new AbstractUiOnlyCallback<Pair<String, Long>>() {
             @Override
@@ -326,5 +348,31 @@ public class DatabaseSampleActivity extends Activity {
                 Toast.makeText(DatabaseSampleActivity.this, String.format(format, result.first, result.second), Toast.LENGTH_SHORT).show();
             }
         };
+    }
+
+    @NonNull
+    protected User createTestUser() {
+        User user = new User();
+        user.setName("Test");
+        user.setGender("Male");
+
+        Group groupA = new Group();
+        groupA.setGroupCode("Test Group A");
+
+        Group groupB = new Group();
+        groupB.setGroupCode("Test Group B");
+        user.setCuratingGroup(Arrays.asList(groupA));
+        user.setAttendingGroup(new HashSet<Group>(Arrays.asList(groupA, groupB)));
+
+        Game game1 = new Game();
+        game1.setName("Test game 1");
+        game1.setCreator(user);
+        game1.setOfficialGroup(groupA);
+
+        Game game2 = new Game();
+        game2.setName("Test game 2");
+        game2.setCreator(user);
+        groupB.setSupportGames(new Game[]{game1, game2});
+        return user;
     }
 }

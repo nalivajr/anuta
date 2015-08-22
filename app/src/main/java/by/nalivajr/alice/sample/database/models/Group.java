@@ -44,4 +44,60 @@ public class Group {
 
     @ManyToMany
     private Set<User> attendingUsers;
+
+    public String getGroupCode() {
+        return groupCode;
+    }
+
+    public void setGroupCode(String groupCode) {
+        this.groupCode = groupCode;
+    }
+
+    public String getGender() {
+        return gender;
+    }
+
+    public void setGender(String gender) {
+        this.gender = gender;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
+
+    public Game getOfficialGame() {
+        return officialGame;
+    }
+
+    public void setOfficialGame(Game officialGame) {
+        this.officialGame = officialGame;
+    }
+
+    public List<User> getGenderUsers() {
+        return genderUsers;
+    }
+
+    public void setGenderUsers(List<User> genderUsers) {
+        this.genderUsers = genderUsers;
+    }
+
+    public Game[] getSupportGames() {
+        return supportGames;
+    }
+
+    public void setSupportGames(Game[] supportGames) {
+        this.supportGames = supportGames;
+    }
+
+    public Set<User> getAttendingUsers() {
+        return attendingUsers;
+    }
+
+    public void setAttendingUsers(Set<User> attendingUsers) {
+        this.attendingUsers = attendingUsers;
+    }
 }
