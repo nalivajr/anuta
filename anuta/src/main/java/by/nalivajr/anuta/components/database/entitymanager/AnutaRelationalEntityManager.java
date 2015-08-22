@@ -22,7 +22,6 @@ import by.nalivajr.anuta.components.database.models.EntityCache;
 import by.nalivajr.anuta.components.database.models.EntityDescriptor;
 import by.nalivajr.anuta.components.database.models.RelationDescriptor;
 import by.nalivajr.anuta.components.database.models.RelationQueryDescriptor;
-import by.nalivajr.anuta.components.database.models.SimpleDatabaseAccessSession;
 import by.nalivajr.anuta.components.database.models.SqliteDataType;
 import by.nalivajr.anuta.components.database.query.AnutaQuery;
 import by.nalivajr.anuta.tools.Anuta;
@@ -127,16 +126,12 @@ public abstract class AnutaRelationalEntityManager extends AbstractEntityManager
     private <T> T cursorToEntity(Class<T> entityClass, Cursor cursor, Collection<ColumnDescriptor> columns) {
         long rowId = cursor.getLong(cursor.getColumnIndex(BaseColumns._ID));
 
-        boolean cacheCreator = false;
+        boolean sessionCreator = openSession();
         DatabaseAccessSession accessSession = session.get();
-        if (accessSession == null) {
-            accessSession = new SimpleDatabaseAccessSession();
-            session.set(accessSession);
-            cacheCreator = true;
-        }
         EntityCache cache = accessSession.getCache();
         T entityFromCache = cache.getByRowId(entityClass, rowId);
         if (entityFromCache != null) {
+            closeSession(sessionCreator);
             return entityFromCache;
         }
 
@@ -173,10 +168,7 @@ public abstract class AnutaRelationalEntityManager extends AbstractEntityManager
             accessSession.setLoadLevel(level);
         }
 
-        if (cacheCreator){
-            cache.clear();
-            session.remove();
-        }
+        closeSession(sessionCreator);
         return entity;
     }
 

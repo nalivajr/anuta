@@ -243,14 +243,14 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
 
     @Override
     public <T> T getPlainEntity(Class<T> entityClass, String id) {
-        DatabaseAccessSession accessSession = new SimpleDatabaseAccessSession();
+        boolean sessionCreator = openSession();
+
+        DatabaseAccessSession accessSession = session.get();
         accessSession.setLoadLevel(DatabaseAccessSession.LEVEL_ENTITY_ONLY);
-        session.set(accessSession);
 
         T entity = find(entityClass, id);
 
-        accessSession.getCache().clear();
-        session.remove();
+        closeSession(sessionCreator);
         return entity;
     }
 
@@ -262,18 +262,38 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
     @Override
     public <T> T initialize(T entity, int level) {
         if(entity == null) {
-            return entity;
+            return null;
         }
-        DatabaseAccessSession accessSession = new SimpleDatabaseAccessSession();
+        boolean sessionCreator = openSession();
+        DatabaseAccessSession accessSession = session.get();
         accessSession.setLoadLevel(level);
-        session.set(accessSession);
 
         String id = getEntityId(entity);
         entity = (T) find(entity.getClass(), id);
 
-        accessSession.getCache().clear();
-        session.remove();
+        closeSession(sessionCreator);
         return entity;
+    }
+
+    @Override
+    public <T> Collection<T> initialize(Collection<T> entities) {
+        return initialize(entities, DatabaseAccessSession.LEVEL_ALL);
+    }
+
+    @Override
+    public <T> Collection<T> initialize(Collection<T> entities, int level) {
+        if (entities == null || entities.isEmpty()) {
+            return entities;
+        }
+        boolean sessionCreator = openSession();
+        List<T> initializedEntities = new LinkedList<T>();
+        for (T entity : entities) {
+            initializedEntities.add(initialize(entity, level));
+        }
+        entities.clear();
+        entities.addAll(initializedEntities);
+        closeSession(sessionCreator);
+        return entities;
     }
 
     @Override
@@ -312,6 +332,24 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
         return new BaseAnutaQueryBuilder<T>(cls);
     }
 
+    protected boolean openSession() {
+        DatabaseAccessSession accessSession = session.get();
+        if (accessSession == null) {
+            accessSession = new SimpleDatabaseAccessSession();
+            session.set(accessSession);
+            return true;
+        }
+        return false;
+    }
+
+    protected void closeSession(boolean sessionCreator) {
+        DatabaseAccessSession accessSession = session.get();
+        if (sessionCreator && accessSession != null) {
+            accessSession.getCache().clear();
+            session.remove();
+        }
+    }
+
     /**
      * Saves entity and all related entities to database recursively.
      * @param entity the entity to be saved
@@ -326,15 +364,11 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
             return entity;
         }
 
-        boolean cacheCreator = false;
+        boolean sessionCreator = openSession();
         DatabaseAccessSession accessSession = session.get();
-        if (accessSession == null) {
-            accessSession = new SimpleDatabaseAccessSession();
-            session.set(accessSession);
-            cacheCreator = true;
-        }
         EntityCache cache = accessSession.getCache();
         if (isInCache(entity, cache)) {
+            closeSession(sessionCreator);
             return entity;
         }
 
@@ -357,10 +391,7 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
         buildAddRelationsOperations(entity, operations);
         applyOperations(operations, authority);
 
-        if (cacheCreator) {
-            cache.clear();
-            session.remove();
-        }
+        closeSession(sessionCreator);
         return entity;
     }
 
@@ -443,15 +474,11 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
             return;
         }
 
-        boolean cacheCreator = false;
+        boolean sessionCreator = openSession();
         DatabaseAccessSession accessSession = session.get();
-        if (accessSession == null) {
-            accessSession = new SimpleDatabaseAccessSession();
-            session.set(accessSession);
-            cacheCreator = true;
-        }
         EntityCache cache = accessSession.getCache();
         if (isInCache(entity, cache)) {
+            closeSession(sessionCreator);
             return;
         }
 
@@ -470,10 +497,7 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
         buildUpdateRelationsOperations(entity, operations);
         applyOperations(operations, authority);
 
-        if (cacheCreator) {
-            cache.clear();
-            session.remove();
-        }
+        closeSession(sessionCreator);
     }
 
     /**

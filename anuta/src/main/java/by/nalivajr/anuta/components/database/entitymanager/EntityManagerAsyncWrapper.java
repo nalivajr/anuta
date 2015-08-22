@@ -189,6 +189,26 @@ public class EntityManagerAsyncWrapper implements AnutaAsyncEntityManager {
     }
 
     @Override
+    public <T> void initialize(final Collection<T> entities, final ActionCallback<Collection<T>> callback) {
+        executorService.submit(createTask(new Callable<Collection<T>>() {
+            @Override
+            public Collection<T> call() throws Exception {
+                return entityManager.initialize(entities);
+            }
+        }, callback));
+    }
+
+    @Override
+    public <T> void initialize(final Collection<T> entities, final int level, ActionCallback<Collection<T>> callback) {
+        executorService.submit(createTask(new Callable<Collection<T>>() {
+            @Override
+            public Collection<T> call() throws Exception {
+                return entityManager.initialize(entities, level);
+            }
+        }, callback));
+    }
+
+    @Override
     public <T> T save(T entity) {
         return entityManager.save(entity);
     }
@@ -266,6 +286,16 @@ public class EntityManagerAsyncWrapper implements AnutaAsyncEntityManager {
     @Override
     public <T> T initialize(T entity, int level) {
         return entityManager.initialize(entity, level);
+    }
+
+    @Override
+    public <T> Collection<T> initialize(Collection<T> entities) {
+        return entityManager.initialize(entities);
+    }
+
+    @Override
+    public <T> Collection<T> initialize(Collection<T> entities, int level) {
+        return entityManager.initialize(entities, level);
     }
 
     @Override

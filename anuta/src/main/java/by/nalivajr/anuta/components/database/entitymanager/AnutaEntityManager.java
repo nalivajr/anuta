@@ -145,4 +145,24 @@ public interface AnutaEntityManager {
      * @return initialized entity. WARNING! The reference of returned object will differ from passed at params
      */
     public <T> T initialize(T entity, int level);
+
+    /**
+     * Initializes all related collections and entities for the given collection of entities
+     * @param entities the collection of entities to be initialized
+     * @return initialized entity. WARNING! The reference of returned object will differ from passed at params
+     */
+    public <T> Collection<T> initialize(Collection<T> entities);
+
+    /**
+     * Initializes all related collections and entities up to the given level
+     * @param entities the collection of entities to be initialized
+     * @param level the level of initialization (greater then 0 or one of the following)
+     *              <ul>
+     *              <li>{@link DatabaseAccessSession#LEVEL_ENTITY_ONLY} - to load plain entity</li>
+     *              <li>{@link DatabaseAccessSession#LEVEL_ALL} - to load entity and all dependent collections</li>
+     *              <li>{@link DatabaseAccessSession#LEVEL_ANNOTATION_BASED} - to load entity and collections will be loaded accorging to annotation config</li>
+     *              </ul>
+     * @return initialized entity. WARNING! The reference of returned object will differ from passed at params
+     */
+    public <T> Collection<T> initialize(Collection<T> entities, int level);
 }
