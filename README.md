@@ -1,15 +1,40 @@
-# alice
-Android Lightweight Instruments CollEction (Android development tools library)
+# Anuta
+ANdroid Useful Tools Assembly
+
+![Anuta logo](https://cloud.githubusercontent.com/assets/5110943/9425845/00db1654-492a-11e5-9ef9-3ea3cf62cb2a.png)
 
 ## Overview
-Alice is a set of utilities, which may help to write Android applications.
+Anuta is a set of utilities, which may help to write Android applications.
 
-Alice does not require any additional libraries to be downloaded. Just add it as a dependency to your project and it's ready to be used.
+Anuta does not require any additional libraries to be downloaded. Just add it as a dependency to your project and it's ready to be used.
 
 ## Components
-Right now Alice library contains next tools:
-* [View Injection](https://github.com/nalivajr/alice/wiki/View-Injection)
-* [Adapter Tools](https://github.com/nalivajr/alice/wiki/Alice-Adapter)
-* [Simple ORM](https://github.com/nalivajr/alice/wiki/Simple-ORM)
+Right now Anutalibrary contains next tools:
+* [View Injection](https://github.com/nalivajr/anuta/wiki/View-Injection)
+* [Adapter Tools](https://github.com/nalivajr/anuta/wiki/Anuta-Adapter)
+* [Simple ORM](https://github.com/nalivajr/anuta/wiki/Simple-ORM)
 
-All Alice's tools can be accessed using instances of util classes, which are inside Alice class. 
+All Anuta's tools can be accessed using instances of util classes, which are inside Anuta class. 
+
+## Samples
+In source code you can find two modules: anuta and app. Module `anuta` contains all the code of library. It can be compiled to .aar and used in other applications. Module `app` contains sample activities, which can help to anderstand how to use Anuta.
+
+## News
+Version v0.2.0 released
+
+1. The code was moved to by.nalivajr package.
+2. Cursor-like logic, which helps to iterate elements in database
+3. New cursor based adapter added
+4. Async Entity Manager allows to access database in background thread and receive result in callback.
+5. New adapters and also a number of utils methods for adapters creation
+
+
+Version v0.3.0 released. 
+
+1. Alice was renamed to Anuta
+2. The component, for background task execution and optional UI notification was added.
+3. Relation in ORM
+4. QueryBuilder was extended
+5. Entity Cursor can be configured to auto-requery updated data
+6. Background task execution
+
