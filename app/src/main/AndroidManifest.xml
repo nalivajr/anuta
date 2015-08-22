@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="by.nalivajr.alice.sample" >
+    package="by.nalivajr.anuta.sample" >
 
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/AppTheme"
-        android:name="by.nalivajr.alice.sample.TestApplication">
+        android:name="by.nalivajr.anuta.sample.TestApplication">
         <activity
-            android:name="by.nalivajr.alice.sample.ui.SampleActivity"
+            android:name="by.nalivajr.anuta.sample.ui.SampleActivity"
             android:label="@string/app_name" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -17,16 +17,16 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="by.nalivajr.alice.sample.ui.AdapterSampleActivity"
-            android:label="Alice Adapter test" >
+            android:name="by.nalivajr.anuta.sample.ui.AdapterSampleActivity"
+            android:label="Anuta Adapter test" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
         <activity
-            android:name="by.nalivajr.alice.sample.database.DatabaseSampleActivity"
-            android:label="Alice EntityManager Test" >
+            android:name="by.nalivajr.anuta.sample.database.DatabaseSampleActivity"
+            android:label="Anuta EntityManager Test" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -34,8 +34,8 @@
         </activity>
 
         <provider
-            android:authorities="alicesample"
-            android:name="by.nalivajr.alice.sample.database.SampleProvider"
+            android:authorities="anutasample"
+            android:name="by.nalivajr.anuta.sample.database.SampleProvider"
             android:exported="false"/>
     </application>
 

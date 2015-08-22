@@ -1,1 +1,1 @@
-include ':alice', ':app'
+include ':anuta', ':app'
