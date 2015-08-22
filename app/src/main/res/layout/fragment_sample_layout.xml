@@ -4,7 +4,7 @@
               android:layout_width="match_parent"
               android:layout_height="match_parent">
 
-    <by.nalivajr.alice.sample.ui.CustomView
+    <by.nalivajr.anuta.sample.ui.CustomView
         android:id="@+id/cv_test"
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
