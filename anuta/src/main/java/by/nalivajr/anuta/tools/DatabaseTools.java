@@ -17,7 +17,6 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -62,9 +61,12 @@ public final class DatabaseTools {
      * @throws NotAnnotatedEntityException if class is not annotated with {@link Entity}
      */
     public <T extends Identifiable> String generateRelationalTableScript(List<Class<T>> entityClasses) {
+        Set<String> tables = new HashSet<String>();
         StringBuilder builder = new StringBuilder();
         for (Class entityClass : entityClasses) {
             builder.append(generateRelationalTableScript(entityClass));
+            String tableName = getEntityTableName(entityClass);
+            tables.add(tableName);
         }
         Map<Class<?>, Set<String>> addedColumns = new HashMap<Class<?>, Set<String>>();
         Set<RelationDescriptor> descriptors = new HashSet<RelationDescriptor>();
@@ -99,6 +101,9 @@ public final class DatabaseTools {
         }
 
         for (String tableName : addedTables.keySet()) {
+            if (tables.contains(tableName)) {       //to avoid creation if join table is another entity
+                continue;
+            }
             RelationDescriptor descriptor = addedTables.get(tableName);
             builder.append("CREATE TABLE ")
                     .append(tableName)
@@ -827,8 +832,9 @@ public final class DatabaseTools {
         return null;
     }
 
-    public List<String> getRelatedTablesNames(Class<?> cls) {
-        List<String> tables = new LinkedList<String>();
+    public Map<String, String> getRelatedTablesNames(Class<?> cls) {
+        Map<String, String> tables = new HashMap<String, String>();
+        String authority = cls.getAnnotation(Entity.class).authority();
         Field[] fields = cls.getDeclaredFields();
         for (Field field : fields) {
             ManyToMany anno = field.getAnnotation(ManyToMany.class);
@@ -840,7 +846,7 @@ public final class DatabaseTools {
                 Class<?> related = getRelatedGenericClass(field);
                 tableName = Anuta.databaseTools.buildRelationTableName(cls, related);
             }
-            tables.add(tableName);
+            tables.put(tableName, authority);
         }
         return tables;
     }

@@ -34,7 +34,7 @@
         </activity>
 
         <provider
-            android:authorities="anutasample"
+            android:authorities="by.nalivajr.anuta.sample.authority"
             android:name="by.nalivajr.anuta.sample.database.SampleProvider"
             android:exported="false"/>
     </application>

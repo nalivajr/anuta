@@ -11,7 +11,7 @@ import android.provider.BaseColumns;
 public interface Contract {
 
     public static final int DATABASE_VERSION = 1;
-    public static final String AUTHORITY = "anutasample";
+    public static final String AUTHORITY = "by.nalivajr.anuta.sample.authority";
 
     public static interface SubSubItem extends BaseColumns {
 

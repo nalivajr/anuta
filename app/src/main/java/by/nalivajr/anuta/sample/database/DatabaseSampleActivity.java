@@ -404,6 +404,7 @@ public class DatabaseSampleActivity extends Activity {
         game1.setName("Test game 1");
         game1.setCreator(user);
         game1.setOfficialGroup(groupA);
+        game1.setFanGroups(new Group[]{groupA, groupB});
 
         Game game2 = new Game();
         game2.setName("Test game 2");

@@ -4,15 +4,18 @@ import android.content.Context;
 import android.database.DatabaseErrorHandler;
 import android.database.sqlite.SQLiteDatabase;
 
+import java.util.List;
+
 import by.nalivajr.anuta.components.database.models.Identifiable;
 import by.nalivajr.anuta.tools.Anuta;
-
-import java.util.List;
 
 /**
  * Created by Sergey Nalivko.
  * email: snalivko93@gmail.com
+
+ * @deprecated Not implemented totally, can be used only without relations
  */
+@Deprecated
 public abstract class AnutaNoSQLDatabaseHelper extends AnutaDatabaseHelper {
 
     private static final String TAG = AnutaNoSQLDatabaseHelper.class.getSimpleName();

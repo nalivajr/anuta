@@ -11,12 +11,15 @@ import android.net.Uri;
 import android.util.Log;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import by.nalivajr.anuta.annonatations.database.Entity;
 import by.nalivajr.anuta.components.database.helpers.AnutaDatabaseHelper;
 import by.nalivajr.anuta.components.database.models.Identifiable;
+import by.nalivajr.anuta.exceptions.InvalidMimeCodeException;
 import by.nalivajr.anuta.exceptions.NotAnnotatedEntityException;
 import by.nalivajr.anuta.tools.Anuta;
 
@@ -27,6 +30,9 @@ import by.nalivajr.anuta.tools.Anuta;
 public abstract class AnutaContentProvider extends ContentProvider {
 
     private static final String TAG = AnutaContentProvider.class.getSimpleName();
+
+    private static final String PATH_SUFFIX_SINGLE = "/#";
+    private static final String PATH_SUFFIX_MANY = "/*";
 
     private AnutaDatabaseHelper helper;
     protected Map<String, String> uriToTableName;
@@ -150,6 +156,10 @@ public abstract class AnutaContentProvider extends ContentProvider {
         return updated;
     }
 
+    protected void notifyObservers(Uri uri) {
+        getContext().getContentResolver().notifyChange(uri, null);
+    }
+
     protected <T> void populateMap(List<Class<T>> entityClasses) {
 
         int start = 10001;
@@ -158,6 +168,9 @@ public abstract class AnutaContentProvider extends ContentProvider {
         uriToTableName = new HashMap<String, String>();
         mimeCodeToMimeType = new HashMap<Integer, String>();
         tableNameToAuthority = new HashMap<String, String>();
+        Set<String> tables = new HashSet<String>();
+        Map<String, String> relationTables = new HashMap<String, String>();
+
         int code = start;
         for (Class<T> cls : entityClasses) {
             Entity annotation = cls.getAnnotation(Entity.class);
@@ -166,34 +179,65 @@ public abstract class AnutaContentProvider extends ContentProvider {
             }
             String tableName = Anuta.databaseTools.getEntityTableName(cls, annotation);
             String authority = annotation.authority();
-            code = getAddMatherAndReturnCode(step, code, tableName, authority);
+            String mimeTypeOne = annotation.mimeTypeOne();
+            String mimeTypeMany = annotation.mimeTypeMany();
+            int mimeTypeOneCode = annotation.mimeTypeOneCode();
+            int mimeTypeManyCode = annotation.mimeTypeManyCode();
+            code = addToMatcherAndReturnCode(step, code, tableName, authority, mimeTypeOne, mimeTypeMany, mimeTypeOneCode, mimeTypeManyCode);
 
-            List<String> relatedTables = Anuta.databaseTools.getRelatedTablesNames(cls);
-            for (String relatedTable : relatedTables) {
-                code = getAddMatherAndReturnCode(step, code, relatedTable, authority);
+            tables.contains(tableName);
+            relationTables.putAll(Anuta.databaseTools.getRelatedTablesNames(cls));
+        }
+        for (String relationTableName : relationTables.keySet()) {
+            if (tables.contains(relationTableName)) {
+                continue;
             }
+            String authority = relationTables.get(relationTableName);
+            code = addToMatcherAndReturnCode(step, code, relationTableName, authority, "", "",  -1, -1);
         }
     }
 
-    private int getAddMatherAndReturnCode(int step, int code, String tableName, String authority) {
-        String mimeTypeOne = String.format("vnd.android.cursor.item/vnd.%s.%s", authority, tableName);
-        uriMatcher.addURI(authority, tableName, code++);
+    private int addToMatcherAndReturnCode(int step, int counter, String tableName, String authority,
+                                          String mimeTypeOne, String mimeTypeMany,
+                                          int mimeTypeOneCode, int mimeTypeManyCode) {
+        if (mimeTypeOne == null || mimeTypeOne.isEmpty()) {
+            mimeTypeOne = String.format("vnd.android.cursor.item/vnd.%s.%s", authority, tableName);
+        }
+        mimeTypeOneCode = getAvailableCode(counter, mimeTypeOneCode);
+        uriMatcher.addURI(authority, tableName + PATH_SUFFIX_SINGLE, mimeTypeOneCode);
         uriToTableName.put(mimeTypeOne, tableName);
-        mimeCodeToMimeType.put(code, mimeTypeOne);
-        Log.i(TAG, String.format("Mapping %s to MIME type %s with code %d", tableName, mimeTypeOne, code));
+        mimeCodeToMimeType.put(mimeTypeOneCode, mimeTypeOne);
+        Log.i(TAG, String.format("Mapping %s to MIME type %s with code %d", tableName, mimeTypeOne, mimeTypeOneCode));
 
-        String mimeTypeMany = String.format("vnd.android.cursor.dir/vnd.%s.%s", authority, tableName);
-        uriMatcher.addURI(authority, tableName, code++);
+        if (mimeTypeMany == null || mimeTypeMany.isEmpty()) {
+            mimeTypeMany = String.format("vnd.android.cursor.dir/vnd.%s.%s", authority, tableName);
+        }
+        mimeTypeManyCode = getAvailableCode(counter, mimeTypeManyCode);
+        uriMatcher.addURI(authority, tableName + PATH_SUFFIX_MANY, mimeTypeManyCode);
         uriToTableName.put(mimeTypeMany, tableName);
-        mimeCodeToMimeType.put(code, mimeTypeMany);
-        Log.i(TAG, String.format("Mapping %s to MIME type %s with code %d", tableName, mimeTypeMany, code));
+        mimeCodeToMimeType.put(mimeTypeManyCode, mimeTypeMany);
+        Log.i(TAG, String.format("Mapping %s to MIME type %s with code %d", tableName, mimeTypeMany, mimeTypeManyCode));
+
+        uriMatcher.addURI(authority, tableName, mimeTypeManyCode);
+        Log.i(TAG, String.format("Mapping table %s to with code %d", tableName, mimeTypeManyCode));
 
         tableNameToAuthority.put(tableName, authority);
-        code = (code / step + 1) * step;
-        return code;
+        counter = (counter / step + 1) * step;
+        return counter;
     }
 
-    protected void notifyObservers(Uri uri) {
-        getContext().getContentResolver().notifyChange(uri, null);
+    private int getAvailableCode(int counter, int mimeTypeCode) {
+        Set<Integer> registeredCodes = mimeCodeToMimeType.keySet();
+        if (mimeTypeCode == -1) {
+            mimeTypeCode = counter;
+            while (registeredCodes.contains(mimeTypeCode)) {
+                mimeTypeCode++;
+            }
+        } else {
+            if (registeredCodes.contains(mimeTypeCode)) {
+                throw new InvalidMimeCodeException(mimeTypeCode);
+            }
+        }
+        return mimeTypeCode;
     }
 }

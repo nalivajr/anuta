@@ -8,6 +8,7 @@ import java.util.List;
 import by.nalivajr.anuta.components.database.helpers.AnutaRelationalDatabaseHelper;
 import by.nalivajr.anuta.components.database.providers.AnutaRelationalProvider;
 import by.nalivajr.anuta.sample.database.models.Game;
+import by.nalivajr.anuta.sample.database.models.GameGroup;
 import by.nalivajr.anuta.sample.database.models.Group;
 import by.nalivajr.anuta.sample.database.models.Item;
 import by.nalivajr.anuta.sample.database.models.ItemCollector;
@@ -41,6 +42,7 @@ public class SampleProvider extends AnutaRelationalProvider {
         classes.add((Class<T>) Group.class);
         classes.add((Class<T>) ItemCollector.class);
         classes.add((Class<T>) SampleItem.class);
+        classes.add((Class<T>) GameGroup.class);
         return classes;
     }
 }

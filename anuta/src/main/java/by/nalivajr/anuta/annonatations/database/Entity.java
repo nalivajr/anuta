@@ -43,6 +43,30 @@ public @interface Entity {
      */
     String authority();
 
+    /**
+     * Specifies the MIME type for single entity.
+     * By default will be generated as vnd.android.cursor.item/vnd.{authority}.{tablename}
+     */
+    String mimeTypeOne() default "";
+
+    /**
+     * Specifies the MIME type for set of entities.
+     * By default will be generated as vnd.android.cursor.dir/vnd.{authority}.{tablename}
+     */
+    String mimeTypeMany() default "";
+
+    /**
+     * Specifies the code of MIME type for single entity.
+     * By default will be generated in {@link by.nalivajr.anuta.components.database.providers.AnutaContentProvider}
+     */
+    int mimeTypeOneCode() default -1;
+
+    /**
+     * Specifies the code of MIME type for set of entities.
+     * By default will be generated in {@link by.nalivajr.anuta.components.database.providers.AnutaContentProvider}
+     */
+    int mimeTypeManyCode() default -1;
+
     public static enum InheritancePolicy {
         /**
          * Do not inherit columns.

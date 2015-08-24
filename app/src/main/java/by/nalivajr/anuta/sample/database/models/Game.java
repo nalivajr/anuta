@@ -29,7 +29,7 @@ public class Game {
     @RelatedEntity(dependentEntityClass = Game.class)
     private Group officialGroup;
 
-    @ManyToMany
+    @ManyToMany(relationTableName = "GameGroup", joinTableRelationColumnName = "gameId", joinTableRelationReferencedColumnName = "groupId")
     private Group[] fanGroups;
 
     public String getName() {

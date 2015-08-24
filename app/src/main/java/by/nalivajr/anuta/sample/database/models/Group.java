@@ -39,7 +39,7 @@ public class Group {
     @OneToMany(relationColumnName = "gender", relationReferencedColumnName = "gender")
     private List<User> genderUsers;
 
-    @ManyToMany
+    @ManyToMany(relationTableName = "GameGroup", joinTableRelationColumnName = "groupId", joinTableRelationReferencedColumnName = "gameId")
     private Game[] supportGames;
 
     @ManyToMany

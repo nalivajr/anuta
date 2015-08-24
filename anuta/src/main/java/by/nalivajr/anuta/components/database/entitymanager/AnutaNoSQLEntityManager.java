@@ -6,14 +6,6 @@ import android.database.Cursor;
 import android.provider.BaseColumns;
 import android.util.Log;
 
-import by.nalivajr.anuta.components.database.models.SqliteDataType;
-import by.nalivajr.anuta.tools.Anuta;
-import by.nalivajr.anuta.tools.DatabaseTools;
-import by.nalivajr.anuta.annonatations.database.Column;
-import by.nalivajr.anuta.annonatations.database.Entity;
-import by.nalivajr.anuta.components.database.models.ColumnDescriptor;
-import by.nalivajr.anuta.components.database.models.EntityDescriptor;
-
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializationContext;
@@ -33,10 +25,21 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import by.nalivajr.anuta.annonatations.database.Column;
+import by.nalivajr.anuta.annonatations.database.Entity;
+import by.nalivajr.anuta.components.database.models.ColumnDescriptor;
+import by.nalivajr.anuta.components.database.models.EntityDescriptor;
+import by.nalivajr.anuta.components.database.models.SqliteDataType;
+import by.nalivajr.anuta.tools.Anuta;
+import by.nalivajr.anuta.tools.DatabaseTools;
+
 /**
  * Created by Sergey Nalivko.
  * email: snalivko93@gmail.com
+
+ * @deprecated Not implemented totally, can be used only without relations
  */
+@Deprecated
 public abstract class AnutaNoSQLEntityManager extends AbstractEntityManager {
 
     public static final String TAG = AnutaNoSQLEntityManager.class.getSimpleName();

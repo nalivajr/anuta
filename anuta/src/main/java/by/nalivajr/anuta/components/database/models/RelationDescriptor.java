@@ -162,8 +162,8 @@ public class RelationDescriptor {
         if (relationTable.isEmpty()) {
             relationTable = Anuta.databaseTools.buildRelationTableName(entityClass, relatedEntity);
         }
-        joinRelationColumnName = this.relationColumnName;
-        joinReferencedRelationColumnName = this.relationReferencedColumnName;
+        joinRelationColumnName = anno.joinTableRelationColumnName();
+        joinReferencedRelationColumnName = anno.joinTableRelationReferencedColumnName();
         if (joinRelationColumnName.equals(joinReferencedRelationColumnName)) {
             joinRelationColumnName =  Anuta.databaseTools.getEntityTableName(entityClass).toLowerCase() + relationColumnName;
             joinReferencedRelationColumnName =  Anuta.databaseTools.getEntityTableName(relatedEntity).toLowerCase() + relationReferencedColumnName;

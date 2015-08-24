@@ -7,6 +7,7 @@ import java.util.List;
 
 import by.nalivajr.anuta.components.database.entitymanager.AnutaRelationalEntityManager;
 import by.nalivajr.anuta.sample.database.models.Game;
+import by.nalivajr.anuta.sample.database.models.GameGroup;
 import by.nalivajr.anuta.sample.database.models.Group;
 import by.nalivajr.anuta.sample.database.models.Item;
 import by.nalivajr.anuta.sample.database.models.ItemCollector;
@@ -33,6 +34,7 @@ public class SampleEntityManager extends AnutaRelationalEntityManager {
         list.add(Group.class);
         list.add(SampleItem.class);
         list.add(ItemCollector.class);
+        list.add(GameGroup.class);
         return list;
     }
 }

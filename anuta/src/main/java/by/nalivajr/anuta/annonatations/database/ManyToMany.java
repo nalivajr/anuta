@@ -30,6 +30,20 @@ public @interface ManyToMany {
     public String relationReferencedColumnName() default "";
 
     /**
+     * Specifies the column in relation table, which is referenced to relation column of this entity.
+     * By default, the name will be generated as {entityTablename_relationColumnName};
+     * @return the name of column in relation table, referenced to relation column of this entity.
+     */
+    public String joinTableRelationColumnName() default "";
+
+    /**
+     * Specifies the column in relation table, which is referenced to relation column of related entity.
+     * By default, the name will be generated as {relatedEntityTablename_relatedEntityRelationColumnName};
+     * @return the name of column in relation table, referenced to relation column of this entity.
+     */
+    public String joinTableRelationReferencedColumnName() default "";
+
+    /**
      * Specifies the name of relation table. By default table name will be generated as concatenation of table names of each entity, separated with '_'.
      * E.g. entity1_entity2
      * @return the name of relation table
