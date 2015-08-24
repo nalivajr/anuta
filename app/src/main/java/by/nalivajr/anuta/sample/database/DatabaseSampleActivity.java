@@ -13,6 +13,8 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.gson.Gson;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -33,6 +35,8 @@ import by.nalivajr.anuta.components.execution.SingleThreadActionExecutor;
 import by.nalivajr.anuta.sample.R;
 import by.nalivajr.anuta.sample.database.models.Game;
 import by.nalivajr.anuta.sample.database.models.Group;
+import by.nalivajr.anuta.sample.database.models.ItemCollector;
+import by.nalivajr.anuta.sample.database.models.SampleItem;
 import by.nalivajr.anuta.sample.database.models.SubSubItem;
 import by.nalivajr.anuta.sample.database.models.User;
 import by.nalivajr.anuta.tools.Anuta;
@@ -77,6 +81,9 @@ public class DatabaseSampleActivity extends Activity {
 
     @InnerView(R.id.btn_init_relations_sample)
     private Button initRelationSample;
+
+    @InnerView(R.id.btn_init_alex_test)
+    private Button initAlexTest;
 
     private AnutaEntityManager entityManager;
     private SingleThreadActionExecutor executor = new SingleThreadActionExecutor();
@@ -182,6 +189,35 @@ public class DatabaseSampleActivity extends Activity {
             @Override
             public void onClick(View v) {
                 onRunRelationTestClicked();
+            }
+        });
+
+        initAlexTest.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                //initialization part
+
+                ItemCollector collector = new ItemCollector();
+                SampleItem sampleItem1 = new SampleItem();
+                sampleItem1.setName("SampleItem1");
+
+                SampleItem sampleItem2 = new SampleItem();
+                sampleItem2.setName("SampleItem2");
+
+                collector.getItems().add(sampleItem1);
+                collector.getItems().add(sampleItem2);
+
+                Gson gson = new Gson();
+                String json = gson.toJson(collector);
+
+                //test part
+
+                collector = gson.fromJson(json, ItemCollector.class);
+                entityManager.save(collector);
+                String id = String.valueOf(collector.getRowId());
+
+                collector = entityManager.find(ItemCollector.class, id);
             }
         });
     }

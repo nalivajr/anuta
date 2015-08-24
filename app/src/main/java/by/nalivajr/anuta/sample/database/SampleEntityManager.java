@@ -9,6 +9,8 @@ import by.nalivajr.anuta.components.database.entitymanager.AnutaRelationalEntity
 import by.nalivajr.anuta.sample.database.models.Game;
 import by.nalivajr.anuta.sample.database.models.Group;
 import by.nalivajr.anuta.sample.database.models.Item;
+import by.nalivajr.anuta.sample.database.models.ItemCollector;
+import by.nalivajr.anuta.sample.database.models.SampleItem;
 import by.nalivajr.anuta.sample.database.models.SubSubItem;
 import by.nalivajr.anuta.sample.database.models.User;
 
@@ -29,6 +31,8 @@ public class SampleEntityManager extends AnutaRelationalEntityManager {
         list.add(Game.class);
         list.add(User.class);
         list.add(Group.class);
+        list.add(SampleItem.class);
+        list.add(ItemCollector.class);
         return list;
     }
 }

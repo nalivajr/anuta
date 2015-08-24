@@ -133,6 +133,12 @@
             android:layout_height="wrap_content"
             android:text="Run relation test"/>
 
+        <Button
+            android:id="@+id/btn_init_alex_test"
+            android:layout_width="400dp"
+            android:layout_height="wrap_content"
+            android:text="Run Alex test"/>
+
     </LinearLayout>
 
     <LinearLayout
