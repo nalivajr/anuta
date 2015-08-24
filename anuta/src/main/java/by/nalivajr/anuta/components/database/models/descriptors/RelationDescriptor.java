@@ -1,4 +1,4 @@
-package by.nalivajr.anuta.components.database.models;
+package by.nalivajr.anuta.components.database.models.descriptors;
 
 import java.lang.reflect.Field;
 
@@ -7,6 +7,8 @@ import by.nalivajr.anuta.annonatations.database.Id;
 import by.nalivajr.anuta.annonatations.database.ManyToMany;
 import by.nalivajr.anuta.annonatations.database.OneToMany;
 import by.nalivajr.anuta.annonatations.database.RelatedEntity;
+import by.nalivajr.anuta.components.database.models.enums.RelationType;
+import by.nalivajr.anuta.components.database.models.enums.SqliteDataType;
 import by.nalivajr.anuta.exceptions.DifferentDataTypesInRelationMappingException;
 import by.nalivajr.anuta.exceptions.NotEntityClassUsedInRelation;
 import by.nalivajr.anuta.tools.Anuta;

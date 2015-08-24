@@ -1,4 +1,4 @@
-package by.nalivajr.anuta.components.database.models;
+package by.nalivajr.anuta.components.database.models.enums;
 
 /**
  * Created by Sergey Nalivko.

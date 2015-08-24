@@ -1,4 +1,6 @@
-package by.nalivajr.anuta.components.database.models;
+package by.nalivajr.anuta.components.database.models.session;
+
+import by.nalivajr.anuta.components.database.models.cache.EntityCache;
 
 /**
  * Created by Sergey Nalivko.

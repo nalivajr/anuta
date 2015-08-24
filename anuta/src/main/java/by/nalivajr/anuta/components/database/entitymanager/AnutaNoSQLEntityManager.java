@@ -27,9 +27,9 @@ import java.util.Map;
 
 import by.nalivajr.anuta.annonatations.database.Column;
 import by.nalivajr.anuta.annonatations.database.Entity;
-import by.nalivajr.anuta.components.database.models.ColumnDescriptor;
-import by.nalivajr.anuta.components.database.models.EntityDescriptor;
-import by.nalivajr.anuta.components.database.models.SqliteDataType;
+import by.nalivajr.anuta.components.database.models.descriptors.ColumnDescriptor;
+import by.nalivajr.anuta.components.database.models.descriptors.EntityDescriptor;
+import by.nalivajr.anuta.components.database.models.enums.SqliteDataType;
 import by.nalivajr.anuta.tools.Anuta;
 import by.nalivajr.anuta.tools.DatabaseTools;
 

@@ -4,7 +4,7 @@ import java.util.Collection;
 import java.util.List;
 
 import by.nalivajr.anuta.components.database.cursor.AnutaEntityCursor;
-import by.nalivajr.anuta.components.database.models.DatabaseAccessSession;
+import by.nalivajr.anuta.components.database.models.session.DatabaseAccessSession;
 import by.nalivajr.anuta.components.database.query.AnutaQuery;
 import by.nalivajr.anuta.components.database.query.AnutaQueryBuilder;
 

@@ -1,5 +1,6 @@
-package by.nalivajr.anuta.components.database.models;
+package by.nalivajr.anuta.components.database.models.descriptors;
 
+import by.nalivajr.anuta.components.database.models.enums.SqliteDataType;
 import by.nalivajr.anuta.tools.Anuta;
 import by.nalivajr.anuta.annonatations.database.Column;
 import by.nalivajr.anuta.annonatations.database.Id;

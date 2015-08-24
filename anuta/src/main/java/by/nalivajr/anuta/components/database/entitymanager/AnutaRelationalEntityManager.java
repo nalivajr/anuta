@@ -16,13 +16,13 @@ import java.util.List;
 import java.util.Set;
 
 import by.nalivajr.anuta.annonatations.database.Column;
-import by.nalivajr.anuta.components.database.models.ColumnDescriptor;
-import by.nalivajr.anuta.components.database.models.DatabaseAccessSession;
-import by.nalivajr.anuta.components.database.models.EntityCache;
-import by.nalivajr.anuta.components.database.models.EntityDescriptor;
-import by.nalivajr.anuta.components.database.models.RelationDescriptor;
-import by.nalivajr.anuta.components.database.models.RelationQueryDescriptor;
-import by.nalivajr.anuta.components.database.models.SqliteDataType;
+import by.nalivajr.anuta.components.database.models.descriptors.ColumnDescriptor;
+import by.nalivajr.anuta.components.database.models.session.DatabaseAccessSession;
+import by.nalivajr.anuta.components.database.models.cache.EntityCache;
+import by.nalivajr.anuta.components.database.models.descriptors.EntityDescriptor;
+import by.nalivajr.anuta.components.database.models.descriptors.RelationDescriptor;
+import by.nalivajr.anuta.components.database.models.descriptors.RelationQueryDescriptor;
+import by.nalivajr.anuta.components.database.models.enums.SqliteDataType;
 import by.nalivajr.anuta.components.database.query.AnutaQuery;
 import by.nalivajr.anuta.tools.Anuta;
 

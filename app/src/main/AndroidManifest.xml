@@ -4,13 +4,14 @@
 
     <application
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/anuta_icon_128"
         android:label="@string/app_name"
         android:theme="@style/AppTheme"
         android:name="by.nalivajr.anuta.sample.TestApplication">
         <activity
             android:name="by.nalivajr.anuta.sample.ui.SampleActivity"
-            android:label="@string/app_name" >
+            android:label="Anuta View Injection Sample"
+            android:icon="@drawable/anuta_vi_icon_128">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -26,7 +27,8 @@
         </activity>
         <activity
             android:name="by.nalivajr.anuta.sample.database.DatabaseSampleActivity"
-            android:label="Anuta EntityManager Test" >
+            android:label="Anuta EntityManager Test"
+            android:icon="@drawable/anuta_db_icon_128">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

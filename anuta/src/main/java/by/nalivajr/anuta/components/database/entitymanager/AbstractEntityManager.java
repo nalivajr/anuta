@@ -17,9 +17,7 @@ import android.util.Log;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -27,12 +25,12 @@ import java.util.Map;
 
 import by.nalivajr.anuta.components.database.cursor.AnutaBaseEntityCursor;
 import by.nalivajr.anuta.components.database.cursor.AnutaEntityCursor;
-import by.nalivajr.anuta.components.database.models.DatabaseAccessSession;
-import by.nalivajr.anuta.components.database.models.EntityCache;
-import by.nalivajr.anuta.components.database.models.EntityDescriptor;
+import by.nalivajr.anuta.components.database.helpers.relations.EntityManagerRelationsHelper;
 import by.nalivajr.anuta.components.database.models.Persistable;
-import by.nalivajr.anuta.components.database.models.RelationDescriptor;
-import by.nalivajr.anuta.components.database.models.SimpleDatabaseAccessSession;
+import by.nalivajr.anuta.components.database.models.cache.EntityCache;
+import by.nalivajr.anuta.components.database.models.descriptors.EntityDescriptor;
+import by.nalivajr.anuta.components.database.models.session.DatabaseAccessSession;
+import by.nalivajr.anuta.components.database.models.session.SimpleDatabaseAccessSession;
 import by.nalivajr.anuta.components.database.query.AnutaQuery;
 import by.nalivajr.anuta.components.database.query.AnutaQueryBuilder;
 import by.nalivajr.anuta.components.database.query.BaseAnutaQueryBuilder;
@@ -52,7 +50,7 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
     public static final String ROW_ID_SELECTION = BaseColumns._ID + " = ?";
 
     private Context context;
-    private HashSet<Class<?>> entitiesSet;
+    private EntityManagerRelationsHelper relationsHelper;
     protected Map<Class<?>, EntityDescriptor> entityToDescriptor;
     protected ThreadLocal<DatabaseAccessSession> session;
 
@@ -64,7 +62,7 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
         for (EntityDescriptor descriptor : entityDescriptors) {
             entityToDescriptor.put(descriptor.getEntityClass(), descriptor);
         }
-        entitiesSet = new HashSet<Class<?>>(entityClasses);
+        this.relationsHelper = new EntityManagerRelationsHelper(entityToDescriptor);
         session = new ThreadLocal<DatabaseAccessSession>();
     }
 
@@ -446,8 +444,6 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
         ContentProviderOperation.Builder operationBuilder = ContentProviderOperation.newInsert(uri);
         operationBuilder.withValues(convertToContentValues(entity));
         operations.add(operationBuilder.build());
-
-//        buildAddRelationsOperations(entity, operations);
         return operations;
     }
 
@@ -530,18 +526,14 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
         List<Field> oneRelationFields = new LinkedList<Field>();
 
         oneRelationFields.addAll(entityDescriptor.getEntityRelatedFields());
+        putDeleteRelatedEntityRelationOperations(entity, operations, entityClass, entityDescriptor);
+
         oneRelationFields.addAll(entityDescriptor.getOneToManyFields());
 
-        for (Field field : oneRelationFields) {
-            putRemoveOneToManyRelations(entity, operations, entityClass, entityDescriptor, field);
-        }
+        putDeleteOneToManyRelationOperations(entity, operations, entityClass, entityDescriptor);
         putAddOneToManyOperation(entity, operations, entityClass, entityDescriptor);
 
-        List<Field> manyToManyFields = entityDescriptor.getManyToManyFields();
-        for (Field field : manyToManyFields) {
-            //first need to delete old relations
-            putDeleteManyToManyRelationOperation(entity, operations, entityClass, entityDescriptor, field);
-        }
+        putDeleteManyToManyRelationOperation(entity, operations, entityClass, entityDescriptor);
         putAddManyToManyOperation(entity, operations, entityClass, entityDescriptor);
     }
 
@@ -558,39 +550,14 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
         ContentProviderOperation.Builder operationBuilder = ContentProviderOperation.newDelete(uri);
         operationBuilder.withSelection(ROW_ID_SELECTION, new String[]{String.valueOf(rowId)});
 
-        List<Field> oneRelationFields = new LinkedList<Field>();
-
-        oneRelationFields.addAll(descriptor.getEntityRelatedFields());
-        oneRelationFields.addAll(descriptor.getOneToManyFields());
-
         Class<?> entityClass = entity.getClass();
-        for (Field field : oneRelationFields) {
-            putRemoveOneToManyRelations(entity, operations, entityClass, descriptor, field);
-        }
 
-        List<Field> manyToManyFields = descriptor.getManyToManyFields();
-        for (Field field : manyToManyFields) {
-            //first need to delete old relations
-            putDeleteManyToManyRelationOperation(entity, operations, entityClass, descriptor, field);
-        }
+        putDeleteRelatedEntityRelationOperations(entity, operations, entityClass, descriptor);
 
-        operations.add(operationBuilder.build());
-        return operations;
-    }
+        putDeleteOneToManyRelationOperations(entity, operations, entityClass, descriptor);
 
-    /**
-     * Generates operations, which are required to delete entity
-     *
-     * @param uri table uri
-     * @param idColumnName the name of entity's id column
-     *@param id entity's id  @return {@link ArrayList} of operations
-     */
-    protected ArrayList<ContentProviderOperation> generateOperationsToDelete(Uri uri, String idColumnName, String id) {
-        ArrayList<ContentProviderOperation> operations = new ArrayList<ContentProviderOperation>();
-        ContentProviderOperation.Builder operationBuilder = ContentProviderOperation.newDelete(uri);
-        String selection = idColumnName + "=?";
-        String[] args = new String[]{id};
-        operationBuilder.withSelection(selection, args);
+        putDeleteManyToManyRelationOperation(entity, operations, entityClass, descriptor);
+
         operations.add(operationBuilder.build());
         return operations;
     }
@@ -600,8 +567,10 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
         try {
             result = context.getContentResolver().applyBatch(authority, operations);
         } catch (RemoteException e) {
+            Log.w(TAG, "Could not apply operations", e);
             throw new OperationExecutionException(e);
         } catch (OperationApplicationException e) {
+            Log.w(TAG, "Could not apply operations", e);
             throw new OperationExecutionException(e);
         }
         return result;
@@ -658,7 +627,7 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
     }
 
     protected void checkClassRegistered(Class<?> entityClass) {
-        if (!entitiesSet.contains(entityClass)) {
+        if (!entityToDescriptor.keySet().contains(entityClass)) {
             throw new NotRegisteredEntityClassUsedException(entityClass, this.getClass());
         }
     }
@@ -733,192 +702,80 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
 
     @Nullable
     private <T> Collection getRelatedEntitiesAsCollection(T entity, Field field) {
-        Object relatedEntities = Anuta.reflectionTools.getValue(field, entity);
-        if (relatedEntities == null) {
-            return Collections.EMPTY_LIST;
-        }
-        Collection relatedCollection = null;
-        if (relatedEntities.getClass().isArray()) {
-            Object[] entityArray = (Object[]) relatedEntities;
-            ArrayList entities = new ArrayList(entityArray.length);
-            for (Object relatedEntity : entityArray) {
-                if (relatedEntity != null) {
-                    entities.add(relatedEntity);
-                }
-            }
-            relatedCollection = entities;
-        } else {
-            relatedCollection = (Collection) relatedEntities;
-        }
-        List relatedList = new ArrayList(relatedCollection);
-        while (relatedCollection.contains(null)) {
-            relatedCollection.remove(null);
-        }
-        return relatedList;
+        return relationsHelper.getRelatedEntitiesAsCollection(entity, field);
     }
 
+    /**
+     * Adds {@link ContentProviderOperation} operations, to create relation between given entity and related entities
+     * @param entity the entity, which is going to be removed and relations with what should be destroyed
+     * @param operations list of operations to add
+     * @param entityClass the class of entity
+     * @param descriptor the descriptor of entity
+     */
     private <T> void putAddRelatedEntityOperation(T entity, ArrayList<ContentProviderOperation> operations,
                                                   Class<?> entityClass, EntityDescriptor descriptor) {
-        List<Field> fields = descriptor.getEntityRelatedFields();
-        for (Field field : fields) {
-            Object relatedEntity = Anuta.reflectionTools.getValue(field, entity);
-            if (relatedEntity == null) {
-                continue;
-            }
-            Long relatedEntityRowId = Anuta.databaseTools.getRowId(relatedEntity);
-            if (relatedEntityRowId == null || relatedEntityRowId == 0) {
-                continue;
-            }
-
-            RelationDescriptor relationDescriptor = descriptor.getRelationDescriptorForField(field);
-            Class<?> relationHoldingEntityClass = relationDescriptor.getRelationHoldingEntity();
-            EntityDescriptor relationEntityDescriptor = entityToDescriptor.get(relationHoldingEntityClass);
-            Uri relationTableUri = relationEntityDescriptor.getTableUri();
-
-            String column = relationDescriptor.getJoinReferencedRelationColumnName();       // parent_id column in child
-            String relationColumnName = relationDescriptor.getRelationColumnName();         // column in this entity
-            Field keyField = Anuta.databaseTools.getFieldForColumnName(relationColumnName, entityClass);
-            Object keySource = entity;
-
-            if (entityClass == relationHoldingEntityClass) {
-                column = relationDescriptor.getJoinRelationColumnName();
-                relationColumnName = relationDescriptor.getRelationReferencedColumnName();
-                keyField = Anuta.databaseTools.getFieldForColumnName(relationColumnName, relatedEntity.getClass());
-                keySource = relatedEntity;
-                relatedEntityRowId = Anuta.databaseTools.getRowId(entity);
-            }
-
-            Object value = Anuta.reflectionTools.getValue(keyField, keySource);
-            ContentValues contentValues = new ContentValues();
-            Anuta.databaseTools.putValue(contentValues, column, value);
-
-            ContentProviderOperation.Builder relationOperationBuilder = ContentProviderOperation.newUpdate(relationTableUri);
-            relationOperationBuilder.withValues(contentValues);
-            relationOperationBuilder.withSelection(ROW_ID_SELECTION, new String[]{String.valueOf(relatedEntityRowId)});
-            operations.add(relationOperationBuilder.build());
-        }
+        relationsHelper.putAddRelatedEntityOperation(entity, operations, entityClass, descriptor);
     }
 
+    /**
+     * Adds {@link ContentProviderOperation} operations, to create relations between given entity and related collections
+     * @param entity the entity, which is going to be removed and relations with what should be destroyed
+     * @param operations list of operations to add
+     * @param entityClass the class of entity
+     * @param descriptor the descriptor of entity
+     */
     private <T> void putAddOneToManyOperation(T entity, ArrayList<ContentProviderOperation> operations,
                                               Class<?> entityClass, EntityDescriptor descriptor) {
-        List<Field> fields = descriptor.getOneToManyFields();
-        for (Field field : fields) {
-            Collection relatedEntityCollection = getRelatedEntitiesAsCollection(entity, field);
-            if (relatedEntityCollection == null || relatedEntityCollection.isEmpty()) {
-                continue;
-            }
-
-            RelationDescriptor relationDescriptor = descriptor.getRelationDescriptorForField(field);
-            Class<?> relationHoldingEntityClass = relationDescriptor.getRelationHoldingEntity();
-
-            EntityDescriptor relationEntityDescriptor = entityToDescriptor.get(relationHoldingEntityClass);
-            Uri relationTableUri = relationEntityDescriptor.getTableUri();
-
-            String column = relationDescriptor.getJoinReferencedRelationColumnName();       // parent_id column in child
-            String relationColumnName = relationDescriptor.getRelationColumnName();         // column in this entity
-
-            Field keyField = Anuta.databaseTools.getFieldForColumnName(relationColumnName, entityClass);
-            Object value = Anuta.reflectionTools.getValue(keyField, entity);
-
-            for (Object relatedEntity : relatedEntityCollection) {
-
-                Long relatedEntityRowId = Anuta.databaseTools.getRowId(relatedEntity);
-                if (relatedEntityRowId == null || relatedEntityRowId == 0) {
-                    continue;
-                }
-                ContentValues contentValues = new ContentValues();
-                Anuta.databaseTools.putValue(contentValues, column, value);
-
-                ContentProviderOperation.Builder relationOperationBuilder = ContentProviderOperation.newUpdate(relationTableUri);
-                relationOperationBuilder.withValues(contentValues);
-                relationOperationBuilder.withSelection(ROW_ID_SELECTION, new String[]{String.valueOf(relatedEntityRowId)});
-                operations.add(relationOperationBuilder.build());
-            }
-        }
+        relationsHelper.putAddOneToManyOperation(entity, operations, entityClass, descriptor);
     }
 
+    /**
+     * Adds {@link ContentProviderOperation} operations, to remove relations between given entity and related
+     * collection of many-to-many relationship type
+     * @param entity the entity, which is going to be removed and relations with what should be destroyed
+     * @param operations list of operations to add
+     * @param entityClass the class of entity
+     * @param descriptor the descriptor of entity
+     */
     private <T> void putAddManyToManyOperation(T entity, ArrayList<ContentProviderOperation> operations,
                                                Class<?> entityClass, EntityDescriptor descriptor) {
-        List<Field> fields = descriptor.getManyToManyFields();
-        for (Field field : fields) {
-            Collection relatedCollection = getRelatedEntitiesAsCollection(entity, field);
-            if (relatedCollection == null || relatedCollection.isEmpty()) {
-                continue;
-            }
-
-            RelationDescriptor relationDescriptor = descriptor.getRelationDescriptorForField(field);
-            String relationTableName = relationDescriptor.getRelationTable();
-            Uri relationTableUri = Anuta.databaseTools.buildUriForTableName(relationTableName, descriptor.getAuthority());
-
-            String joinRelationColumnName = relationDescriptor.getJoinRelationColumnName();                     // parent_id column in relation table
-            String joinReferencedRelationColumnName = relationDescriptor.getJoinReferencedRelationColumnName(); // child_id column in child
-
-            String relationColumnName = relationDescriptor.getRelationColumnName();                         // column in this entity
-            String relationReferencedColumnName = relationDescriptor.getRelationReferencedColumnName();     // column in child entity
-
-            for (Object related : relatedCollection) {
-                ContentValues contentValues = new ContentValues();
-                Field keyField = Anuta.databaseTools.getFieldForColumnName(relationColumnName, entityClass);
-                Object entityKey = Anuta.reflectionTools.getValue(keyField, entity);
-                if (entityKey == null) {
-                    continue;
-                }
-                Anuta.databaseTools.putValue(contentValues, joinRelationColumnName, entityKey);
-
-                Field keyRefField = Anuta.databaseTools.getFieldForColumnName(relationReferencedColumnName, related.getClass());
-                Object entityRelKey = Anuta.reflectionTools.getValue(keyRefField, related);
-                if (entityRelKey == null) {
-                    continue;
-                }
-                Anuta.databaseTools.putValue(contentValues, joinReferencedRelationColumnName, entityRelKey);
-
-                ContentProviderOperation.Builder relationOperationBuilder = ContentProviderOperation.newInsert(relationTableUri);
-                relationOperationBuilder.withValues(contentValues);
-                operations.add(relationOperationBuilder.build());
-            }
-        }
+        relationsHelper.putAddManyToManyOperation(entity, operations, entityClass, descriptor);
     }
 
-    private <T> void putRemoveOneToManyRelations(T entity, ArrayList<ContentProviderOperation> operations,
-                                                 Class<?> entityClass, EntityDescriptor entityDescriptor, Field field) {
-        RelationDescriptor relationDescriptor = entityDescriptor.getRelationDescriptorForField(field);
-        if (relationDescriptor.getRelationHoldingEntity() == entityClass) {
-            return;
-        }
-
-        Uri relationTableUri = entityToDescriptor.get(relationDescriptor.getRelationHoldingEntity()).getTableUri();
-
-        ContentProviderOperation.Builder updateRelationOperationBuilder = ContentProviderOperation.newUpdate(relationTableUri);
-        String foreignKeyColumn = relationDescriptor.getRelationColumnName();
-        Field foreignKeyField = Anuta.databaseTools.getFieldForColumnName(foreignKeyColumn, entityClass);
-        Object val = Anuta.reflectionTools.getValue(foreignKeyField, entity);
-
-        if (val == null) {
-            return;
-        }
-
-        String columnToUpdate = relationDescriptor.getJoinReferencedRelationColumnName();
-        ContentValues contentValues = new ContentValues();
-        contentValues.putNull(columnToUpdate);
-        updateRelationOperationBuilder.withSelection(columnToUpdate + "= ?", new String[]{String.valueOf(val)});
-        updateRelationOperationBuilder.withValues(contentValues);
-        operations.add(updateRelationOperationBuilder.build());
+    /**
+     * Adds {@link ContentProviderOperation} operations, to remove relation between given entity and related entities
+     * @param entity the entity, which is going to be removed and relations with what should be destroyed
+     * @param operations list of operations to add
+     * @param entityClass the class of entity
+     * @param entityDescriptor the descriptor of entity
+     */
+    protected <T> void putDeleteRelatedEntityRelationOperations(T entity, ArrayList<ContentProviderOperation> operations,
+                                                          Class<?> entityClass, EntityDescriptor entityDescriptor) {
+        relationsHelper.putDeleteRelatedEntityRelationOperations(entity, operations, entityClass, entityDescriptor);
     }
 
-    private <T> void putDeleteManyToManyRelationOperation(T entity, ArrayList<ContentProviderOperation> operations,
-                                                          Class<?> entityClass, EntityDescriptor entityDescriptor, Field field) {
-        RelationDescriptor relationDescriptor = entityDescriptor.getRelationDescriptorForField(field);
-        String relationTableName = relationDescriptor.getRelationTable();
-        Uri relationTableUri = Anuta.databaseTools.buildUriForTableName(relationTableName, entityDescriptor.getAuthority());
+    /**
+     * Adds {@link ContentProviderOperation} operations, to remove relations between given entity and related collections
+     * @param entity the entity, which is going to be removed and relations with what should be destroyed
+     * @param operations list of operations to add
+     * @param entityClass the class of entity
+     * @param entityDescriptor the descriptor of entity
+     */
+    protected <T> void putDeleteOneToManyRelationOperations(T entity, ArrayList<ContentProviderOperation> operations,
+                                                          Class<?> entityClass, EntityDescriptor entityDescriptor) {
+        relationsHelper.putDeleteOneToManyRelationOperations(entity, operations, entityClass, entityDescriptor);
+    }
 
-        String selection = relationDescriptor.getJoinRelationColumnName() + " = ?";
-        Field relationField = Anuta.databaseTools.getFieldForColumnName(relationDescriptor.getRelationColumnName(), entityClass);
-        Object val = Anuta.reflectionTools.getValue(relationField, entity);
-        if (val != null) {
-            String[] selectionArgs = new String[]{String.valueOf(val)};
-            ContentProviderOperation.Builder deleteRelationBuilder = ContentProviderOperation.newDelete(relationTableUri);
-            deleteRelationBuilder.withSelection(selection, selectionArgs);
-            operations.add(deleteRelationBuilder.build());
-        }
+    /**
+     * Adds {@link ContentProviderOperation} operations, to remove relation between given entity and related
+     * collection of many-to-many relationship type
+     * @param entity the entity, which is going to be removed and relations with what should be destroyed
+     * @param operations list of operations to add
+     * @param entityClass the class of entity
+     * @param entityDescriptor the descriptor of entity
+     */
+    protected <T> void putDeleteManyToManyRelationOperation(T entity, ArrayList<ContentProviderOperation> operations,
+                                                          Class<?> entityClass, EntityDescriptor entityDescriptor) {
+        relationsHelper.putDeleteManyToManyRelationOperation(entity, operations, entityClass, entityDescriptor);
     }
 }

@@ -1,4 +1,4 @@
-package by.nalivajr.anuta.components.database.models;
+package by.nalivajr.anuta.components.database.models.descriptors;
 
 import android.content.ContentResolver;
 import android.database.Cursor;
@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Set;
 
 import by.nalivajr.anuta.annonatations.database.Entity;
+import by.nalivajr.anuta.components.database.models.enums.RelationType;
 import by.nalivajr.anuta.components.database.query.AnutaQuery;
 import by.nalivajr.anuta.components.database.query.AnutaQueryBuilder;
 import by.nalivajr.anuta.components.database.query.BaseAnutaQueryBuilder;
