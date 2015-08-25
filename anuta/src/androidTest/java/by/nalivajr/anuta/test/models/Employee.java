@@ -1,7 +1,6 @@
 package by.nalivajr.anuta.test.models;
 
-import android.database.DatabaseErrorHandler;
-
+import java.util.Date;
 import java.util.Set;
 
 import by.nalivajr.anuta.annonatations.database.Column;
@@ -33,7 +32,7 @@ public class Employee implements Persistable<String> {
     private String gender;
 
     @Column
-    private DatabaseErrorHandler birthDate;
+    private Date birthDate;
 
     @RelatedEntity(relationColumnName = "departmentId", dependentEntityClass = Employee.class)
     private Department department;
@@ -77,11 +76,11 @@ public class Employee implements Persistable<String> {
         this.name = name;
     }
 
-    public DatabaseErrorHandler getBirthDate() {
+    public Date getBirthDate() {
         return birthDate;
     }
 
-    public void setBirthDate(DatabaseErrorHandler birthDate) {
+    public void setBirthDate(Date birthDate) {
         this.birthDate = birthDate;
     }
 
