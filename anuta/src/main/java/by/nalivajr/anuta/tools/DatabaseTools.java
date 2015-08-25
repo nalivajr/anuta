@@ -642,11 +642,27 @@ public final class DatabaseTools {
             String tableName = anno.relationTableName();
             if (tableName.isEmpty()) {
                 Class<?> related = getRelatedGenericClass(field);
-                tableName = Anuta.databaseTools.buildRelationTableName(cls, related);
+                tableName = buildRelationTableName(cls, related);
             }
             tables.put(tableName, authority);
         }
         return tables;
+    }
+
+    /**
+     * Filters declared fields and returns the fields, annotated both with the
+     * {@link by.nalivajr.anuta.annonatations.database.Id} and {@link Column} annotation
+     * @return list of declared fields with the given annotation
+     */
+    public Field getIdField(Class<?> entityClass) {
+        List<Field> fields = Anuta.reflectionTools.getFieldsAnnotatedWith(entityClass, Id.class);
+        for (Field field : fields) {
+            Column columnAnno = field.getAnnotation(Column.class);
+            if (columnAnno != null) {
+                return field;
+            }
+        }
+        return null;
     }
 
     /**

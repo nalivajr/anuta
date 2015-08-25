@@ -8,6 +8,6 @@ public class DifferentDataTypesInRelationMappingException extends RuntimeExcepti
 
     public DifferentDataTypesInRelationMappingException(Class<?> parent, String parentColumn, Class<?> child, String childColumn) {
         super(String.format("Could not build relation for field %s in class %s and field %s in class %s. Columns have different SLQ type",
-                parent.getName(), parentColumn, child.getName(), childColumn));
+                parentColumn, parent.getName(),  childColumn, child.getName()));
     }
 }

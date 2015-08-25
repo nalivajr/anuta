@@ -10,7 +10,9 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
+import by.nalivajr.anuta.annonatations.database.Column;
 import by.nalivajr.anuta.annonatations.database.Entity;
+import by.nalivajr.anuta.annonatations.database.Id;
 import by.nalivajr.anuta.exceptions.EntityInstantiationException;
 
 /**
@@ -60,7 +62,7 @@ public final class ReflectionTools {
     }
 
     /**
-     * Filters declared fields and returns list of fields, annotated with the ginev annotation
+     * Filters declared fields and returns list of fields, annotated with the given annotation
      * @param annotationClass annotation for a field
      * @return list of declared fields with the given annotation
      */

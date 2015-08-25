@@ -3,7 +3,6 @@ package by.nalivajr.anuta.components.database.models.descriptors;
 import java.lang.reflect.Field;
 
 import by.nalivajr.anuta.annonatations.database.Column;
-import by.nalivajr.anuta.annonatations.database.Id;
 import by.nalivajr.anuta.annonatations.database.ManyToMany;
 import by.nalivajr.anuta.annonatations.database.OneToMany;
 import by.nalivajr.anuta.annonatations.database.RelatedEntity;
@@ -60,7 +59,7 @@ public class RelationDescriptor {
             relationTable = Anuta.databaseTools.getEntityTableName(relationHoldingEntity);
         }
         if (relationColumnName.isEmpty()) {
-            relationField = Anuta.reflectionTools.getFieldsAnnotatedWith(entityClass, Id.class).get(0);
+            relationField = Anuta.databaseTools.getIdField(entityClass);
             Column column = relationField.getAnnotation(Column.class);
             this.relationColumnName = column.value();
             if (this.relationColumnName.isEmpty()) {
@@ -74,7 +73,7 @@ public class RelationDescriptor {
                     this.relationColumnType : Anuta.databaseTools.dispatchType(relationField);
         }
         if (relationReferencedColumnName.isEmpty()) {
-            relationReferencedField = Anuta.reflectionTools.getFieldsAnnotatedWith(relatedEntity, Id.class).get(0);
+            relationReferencedField = Anuta.databaseTools.getIdField(relatedEntity);
             Column column = relationReferencedField.getAnnotation(Column.class);
             this.relationReferencedColumnName = column.value();
             if (this.relationReferencedColumnName.isEmpty()) {

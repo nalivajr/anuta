@@ -13,9 +13,9 @@ public class InvalidEntityIdMappingException extends RuntimeException {
 
     private static <T> String generateMessage(int ids, Class<T> cls) {
         if (ids > 1) {
-            return String.format("Entity should have only one identifier field. Please check class %s", cls.getName());
+            return String.format("Entity should have only one column field, annotated with %s field. Please check class %s", Id.class.getName(), cls.getName());
         } else {
-            return String.format("At least one property expected to be annotated with %s. Please check class %s", Id.class.getName(), cls.getName());
+            return String.format("At least one column property expected to be annotated with %s. Please check class %s", Id.class.getName(), cls.getName());
         }
     }
 }
