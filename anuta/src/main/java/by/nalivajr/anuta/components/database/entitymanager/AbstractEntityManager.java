@@ -29,6 +29,7 @@ import by.nalivajr.anuta.components.database.helpers.relations.EntityManagerRela
 import by.nalivajr.anuta.components.database.models.Persistable;
 import by.nalivajr.anuta.components.database.models.cache.EntityCache;
 import by.nalivajr.anuta.components.database.models.descriptors.EntityDescriptor;
+import by.nalivajr.anuta.components.database.models.descriptors.RelationDescriptor;
 import by.nalivajr.anuta.components.database.models.session.DatabaseAccessSession;
 import by.nalivajr.anuta.components.database.models.session.SimpleDatabaseAccessSession;
 import by.nalivajr.anuta.components.database.query.AnutaQuery;
@@ -362,7 +363,7 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
     protected <T> T saveEntity(T entity, EntityDescriptor descriptor) {
 
         Long rowId = Anuta.databaseTools.getRowId(entity);
-        if (rowId != null && rowId != 0) {
+        if (!isNewEntityRowId(rowId)) {
             updateEntity(entity, descriptor);
             return entity;
         }
@@ -405,14 +406,34 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
      * @param descriptor the descriptor of the entity
      */
     private <T> void mergeRelatedEntities(T entity, EntityDescriptor descriptor) {
+        mergeRelatedEntity(entity, descriptor);
+        mergeRelatedCollection(entity, descriptor);
+    }
+
+    private <T> void mergeRelatedEntity(T entity, EntityDescriptor descriptor) {
         List<Field> relationFields = descriptor.getEntityRelatedFields();
         for (Field field : relationFields) {
             Object related = Anuta.reflectionTools.getValue(field, entity);
             if (related == null) {
                 continue;
             }
-            update(related);
+
+            RelationDescriptor relationDescriptor = descriptor.getRelationDescriptorForField(field);
+            boolean cascadeSave = relationDescriptor.isCascadeSave();
+            boolean cascadeUpdate = relationDescriptor.isCascadeUpdate();
+            if (!cascadeSave && !cascadeUpdate) {
+                continue;
+            }
+            Long rowId = Anuta.databaseTools.getRowId(related);
+            if (isNewEntityRowId(rowId) && cascadeSave) {
+                save(related);
+            } else if (cascadeUpdate) {
+                update(related);
+            }
         }
+    }
+
+    private <T> void mergeRelatedCollection(T entity, EntityDescriptor descriptor) {
         Collection<Field> relatedCollectionsFields = new ArrayList<Field>(descriptor.getOneToManyFields());
         relatedCollectionsFields.addAll(descriptor.getManyToManyFields());
         for (Field field : relatedCollectionsFields) {
@@ -420,8 +441,19 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
             if (relatedCollection == null) {
                 continue;
             }
+            RelationDescriptor relationDescriptor = descriptor.getRelationDescriptorForField(field);
+            boolean cascadeSave = relationDescriptor.isCascadeSave();
+            boolean cascadeUpdate = relationDescriptor.isCascadeUpdate();
+            if (!cascadeSave && !cascadeUpdate) {
+                continue;
+            }
             for (Object relatedEntity : relatedCollection) {
-                update(relatedEntity);
+                Long rowId = Anuta.databaseTools.getRowId(relatedEntity);
+                if (isNewEntityRowId(rowId) && cascadeSave) {
+                    save(relatedEntity);
+                } else if (cascadeUpdate) {
+                    update(relatedEntity);
+                }
             }
         }
     }
@@ -470,7 +502,7 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
      */
     protected <T> void updateEntity(T entity, EntityDescriptor descriptor) {
         Long rowId = Anuta.databaseTools.getRowId(entity);
-        if (rowId == null || rowId == 0) {
+        if (isNewEntityRowId(rowId)) {
             saveEntity(entity, descriptor);
             return;
         }
@@ -501,6 +533,10 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
         closeSession(sessionCreator);
     }
 
+    protected boolean isNewEntityRowId(Long rowId) {
+        return rowId == null || rowId == 0;
+    }
+
     /**
      * Generates operations, which are required to update entity
      *
@@ -512,7 +548,7 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
         ArrayList<ContentProviderOperation> operations = new ArrayList<ContentProviderOperation>();
 
         Long rowId = Anuta.databaseTools.getRowId(entity);
-        if (rowId == null || rowId == 0) {
+        if (isNewEntityRowId(rowId)) {
             operations.addAll(generateOperationsToSave(uri, entity));
             return operations;
         }

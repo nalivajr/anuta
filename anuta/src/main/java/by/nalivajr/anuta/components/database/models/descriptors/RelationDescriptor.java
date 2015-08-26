@@ -1,7 +1,11 @@
 package by.nalivajr.anuta.components.database.models.descriptors;
 
 import java.lang.reflect.Field;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
+import by.nalivajr.anuta.annonatations.database.CascadeType;
 import by.nalivajr.anuta.annonatations.database.Column;
 import by.nalivajr.anuta.annonatations.database.FetchType;
 import by.nalivajr.anuta.annonatations.database.ManyToMany;
@@ -30,25 +34,38 @@ public class RelationDescriptor {
     private Class<?> relatedEntity;
     private Class<?> relationHoldingEntity;
     private FetchType fetchType;
+    private boolean cascadeSave = false;
+    private boolean cascadeUpdate = false;
+    private boolean cascadeDelete = false;
 
     public RelationDescriptor(Class<?> entityClass, Field field) {
         RelatedEntity otoAnno = field.getAnnotation(RelatedEntity.class);
         if (otoAnno != null) {
             buildOnRelatedEntity(otoAnno, field, entityClass);
             fetchType = otoAnno.fetchType();
+            initCascade(otoAnno.cascadeType());
             return;
         }
         OneToMany otmAnno = field.getAnnotation(OneToMany.class);
         if (otmAnno != null) {
             buildOnOneToMany(otmAnno, field, entityClass);
             fetchType = otmAnno.fetchType();
+            initCascade(otmAnno.cascadeType());
             return;
         }
         ManyToMany mtmAnno = field.getAnnotation(ManyToMany.class);
         if (mtmAnno != null) {
             buildOnManyToMany(mtmAnno, field, entityClass);
             fetchType = mtmAnno.fetchType();
+            initCascade(mtmAnno.cascadeType());
         }
+    }
+
+    private void initCascade(CascadeType[] types) {
+        Set<CascadeType> cascadeTypes = new HashSet<CascadeType>(Arrays.asList(types));
+        cascadeSave = cascadeTypes.contains(CascadeType.ALL) || cascadeTypes.contains(CascadeType.INSERT);
+        cascadeUpdate = cascadeTypes.contains(CascadeType.ALL) || cascadeTypes.contains(CascadeType.UPDATE);
+        cascadeDelete = cascadeTypes.contains(CascadeType.ALL) || cascadeTypes.contains(CascadeType.DELETE);
     }
 
     private void initRelationData(String relationColumnName, String relationReferencedColumnName, Class<?> entityClass, Class<?> relatedEntity) {
@@ -214,5 +231,17 @@ public class RelationDescriptor {
 
     public FetchType getFetchType() {
         return fetchType;
+    }
+
+    public boolean isCascadeSave() {
+        return cascadeSave;
+    }
+
+    public boolean isCascadeUpdate() {
+        return cascadeUpdate;
+    }
+
+    public boolean isCascadeDelete() {
+        return cascadeDelete;
     }
 }
