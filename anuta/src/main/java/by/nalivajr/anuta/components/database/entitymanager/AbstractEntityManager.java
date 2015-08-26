@@ -34,6 +34,8 @@ import by.nalivajr.anuta.components.database.models.session.SimpleDatabaseAccess
 import by.nalivajr.anuta.components.database.query.AnutaQuery;
 import by.nalivajr.anuta.components.database.query.AnutaQueryBuilder;
 import by.nalivajr.anuta.components.database.query.BaseAnutaQueryBuilder;
+import by.nalivajr.anuta.components.database.stub.LazyInitializationCollection;
+import by.nalivajr.anuta.components.database.stub.RelatedEntitiesProxyFactory;
 import by.nalivajr.anuta.exceptions.DifferentEntityClassesException;
 import by.nalivajr.anuta.exceptions.InvalidQueryTypeException;
 import by.nalivajr.anuta.exceptions.NotRegisteredEntityClassUsedException;
@@ -280,8 +282,11 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
 
     @Override
     public <T> Collection<T> initialize(Collection<T> entities, int level) {
-        if (entities == null || entities.isEmpty()) {
+        if (entities == null) {
             return entities;
+        }
+        if (entities instanceof LazyInitializationCollection) {
+            return initLazyCollection((LazyInitializationCollection<T>) entities, level);
         }
         boolean sessionCreator = openSession();
         List<T> initializedEntities = new LinkedList<T>();
@@ -705,6 +710,14 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
         return relationsHelper.getRelatedEntitiesAsCollection(entity, field);
     }
 
+    private <T> Collection<T> initLazyCollection(LazyInitializationCollection<T> entities, int level) {
+        boolean sessionCreator = openSession();
+        session.get().setLoadLevel(level);
+        Collection<T> result = findByQuery(entities.getQuery());
+        result = RelatedEntitiesProxyFactory.getCorrectTypeCollection(entities.getTargetCollectionType(), result);
+        closeSession(sessionCreator);
+        return result;
+    }
     /**
      * Adds {@link ContentProviderOperation} operations, to create relation between given entity and related entities
      * @param entity the entity, which is going to be removed and relations with what should be destroyed
@@ -712,7 +725,7 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
      * @param entityClass the class of entity
      * @param descriptor the descriptor of entity
      */
-    private <T> void putAddRelatedEntityOperation(T entity, ArrayList<ContentProviderOperation> operations,
+    protected <T> void putAddRelatedEntityOperation(T entity, ArrayList<ContentProviderOperation> operations,
                                                   Class<?> entityClass, EntityDescriptor descriptor) {
         relationsHelper.putAddRelatedEntityOperation(entity, operations, entityClass, descriptor);
     }
@@ -724,7 +737,7 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
      * @param entityClass the class of entity
      * @param descriptor the descriptor of entity
      */
-    private <T> void putAddOneToManyOperation(T entity, ArrayList<ContentProviderOperation> operations,
+    protected <T> void putAddOneToManyOperation(T entity, ArrayList<ContentProviderOperation> operations,
                                               Class<?> entityClass, EntityDescriptor descriptor) {
         relationsHelper.putAddOneToManyOperation(entity, operations, entityClass, descriptor);
     }
@@ -737,7 +750,7 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
      * @param entityClass the class of entity
      * @param descriptor the descriptor of entity
      */
-    private <T> void putAddManyToManyOperation(T entity, ArrayList<ContentProviderOperation> operations,
+    protected <T> void putAddManyToManyOperation(T entity, ArrayList<ContentProviderOperation> operations,
                                                Class<?> entityClass, EntityDescriptor descriptor) {
         relationsHelper.putAddManyToManyOperation(entity, operations, entityClass, descriptor);
     }

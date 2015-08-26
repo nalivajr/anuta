@@ -6,24 +6,26 @@ import android.database.Cursor;
 import android.provider.BaseColumns;
 import android.util.Log;
 
-import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
 import by.nalivajr.anuta.annonatations.database.Column;
-import by.nalivajr.anuta.components.database.models.descriptors.ColumnDescriptor;
-import by.nalivajr.anuta.components.database.models.session.DatabaseAccessSession;
+import by.nalivajr.anuta.annonatations.database.FetchType;
 import by.nalivajr.anuta.components.database.models.cache.EntityCache;
+import by.nalivajr.anuta.components.database.models.descriptors.ColumnDescriptor;
 import by.nalivajr.anuta.components.database.models.descriptors.EntityDescriptor;
 import by.nalivajr.anuta.components.database.models.descriptors.RelationDescriptor;
 import by.nalivajr.anuta.components.database.models.descriptors.RelationQueryDescriptor;
 import by.nalivajr.anuta.components.database.models.enums.SqliteDataType;
+import by.nalivajr.anuta.components.database.models.session.DatabaseAccessSession;
 import by.nalivajr.anuta.components.database.query.AnutaQuery;
+import by.nalivajr.anuta.components.database.stub.LazyInitializationCollection;
+import by.nalivajr.anuta.components.database.stub.RelatedEntitiesProxyFactory;
 import by.nalivajr.anuta.tools.Anuta;
 
 /**
@@ -159,66 +161,63 @@ public abstract class AnutaRelationalEntityManager extends AbstractEntityManager
         cache.put(entity, rowId);
 
         int level = accessSession.getLoadLevel();
-        boolean annotationBased = level == DatabaseAccessSession.LEVEL_ANNOTATION_BASED;
-        if (level > 0 || level == DatabaseAccessSession.LEVEL_ALL || level == DatabaseAccessSession.LEVEL_ANNOTATION_BASED) {
-            level = level > 0 ? level - 1 : level;
-            accessSession.setLoadLevel(level);
-            loadRelatedObjects(entityClass, cursor, entity, annotationBased);
-            level = level >= 0 ? level + 1 : level;
-            accessSession.setLoadLevel(level);
-        }
+        level = level > 0 ? level - 1 : level;
+        accessSession.setLoadLevel(level);
+        loadRelatedObjects(entityClass, cursor, entity, level);
+        level = level >= 0 ? level + 1 : level;
+        accessSession.setLoadLevel(level);
 
         closeSession(sessionCreator);
         return entity;
     }
 
-    private <T> void loadRelatedObjects(Class<T> entityClass, Cursor cursor, T entity, boolean annotationBased) {
+    private <T> void loadRelatedObjects(Class<T> entityClass, Cursor cursor, T entity, int level) {
         EntityDescriptor descriptor = entityToDescriptor.get(entityClass);
         List<Field> fields = descriptor.getEntityRelatedFields();
         for (Field field : fields) {
-            List related = getRelatedObjectList(cursor, descriptor, field, annotationBased);
-            if (related != null && !related.isEmpty()) {
-                Anuta.reflectionTools.setValue(field, entity, related.get(0));
+            Collection related = getRelatedObjectCollection(cursor, descriptor, field, level);
+            boolean lazy = related instanceof LazyInitializationCollection;
+            if (related != null && !lazy && !related.isEmpty()) {
+                Anuta.reflectionTools.setValue(field, entity, related.toArray()[0]);
             }
         }
 
         fields = descriptor.getOneToManyFields();
-        loadAndBindCollection(cursor, entity, descriptor, fields, annotationBased);
+        loadAndBindCollection(cursor, entity, descriptor, fields, level);
 
         fields = descriptor.getManyToManyFields();
-        loadAndBindCollection(cursor, entity, descriptor, fields, annotationBased);
+        loadAndBindCollection(cursor, entity, descriptor, fields, level);
     }
 
-    private List getRelatedObjectList(Cursor cursor, EntityDescriptor descriptor, Field field, boolean annotationBased) {
-        RelationDescriptor relationDescriptor = descriptor.getRelationDescriptorForField(field);
-        if (annotationBased && relationDescriptor.isLazyFetch()) {
-            return null;
-        }
+    private Collection getRelatedObjectCollection(Cursor cursor, EntityDescriptor descriptor, Field field, int level) {
         RelationQueryDescriptor queryDescriptor = descriptor.getRelationQueryDescriptorForField(field);
         AnutaQuery query = queryDescriptor.buildQuery(getContext().getContentResolver(), cursor);
-        if (query == null) {
-            return null;
+
+        RelationDescriptor relationDescriptor = descriptor.getRelationDescriptorForField(field);
+        FetchType fetchType = relationDescriptor.getFetchType();
+
+        boolean lazyLoad =
+                level == DatabaseAccessSession.LEVEL_ENTITY_ONLY ||
+                (level == DatabaseAccessSession.LEVEL_ANNOTATION_BASED && fetchType == FetchType.LAZY);
+
+        if (lazyLoad) {
+            Class type = (Class) field.getType();
+            return RelatedEntitiesProxyFactory.getNotInitializedCollection(type, query);
         }
+
+        if (query == null) {
+            return Collections.EMPTY_LIST;
+        }
+
         return findByQuery(query);
     }
 
-    private <T> void loadAndBindCollection(Cursor cursor, T entity, EntityDescriptor descriptor, List<Field> fields, boolean annotationBased) {
+    private <T> void loadAndBindCollection(Cursor cursor, T entity, EntityDescriptor descriptor, List<Field> fields, int level) {
         for (Field field : fields) {
-            List related = getRelatedObjectList(cursor, descriptor, field, annotationBased);
+            Collection related = getRelatedObjectCollection(cursor, descriptor, field, level);
             Class type = (Class) field.getType();
-            if (related == null) {
-                Anuta.reflectionTools.setValue(field, entity, related);
-            } else if (Set.class.isAssignableFrom(type)) {
-                Anuta.reflectionTools.setValue(field, entity, new HashSet(related));
-            } else if (type.isArray()) {
-                Object[] array = (Object[]) Array.newInstance(type.getComponentType(), related.size());
-                array = related.toArray(array);
-                Anuta.reflectionTools.setValue(field, entity, array);
-            } else if (List.class.isAssignableFrom(type) || Collection.class.isAssignableFrom(type)) {
-                Anuta.reflectionTools.setValue(field, entity, related);
-            } else {
-                throw new RuntimeException("Could not load entities to unknown collection " + type.getName());
-            }
+            Object value = RelatedEntitiesProxyFactory.getCorrectTypeObject(type, related);
+            Anuta.reflectionTools.setValue(field, entity, value);
         }
     }
 }

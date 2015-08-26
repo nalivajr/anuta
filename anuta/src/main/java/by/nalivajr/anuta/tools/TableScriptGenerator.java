@@ -15,7 +15,6 @@ import by.nalivajr.anuta.annonatations.database.Id;
 import by.nalivajr.anuta.annonatations.database.ManyToMany;
 import by.nalivajr.anuta.annonatations.database.OneToMany;
 import by.nalivajr.anuta.annonatations.database.RelatedEntity;
-import by.nalivajr.anuta.components.database.models.Identifiable;
 import by.nalivajr.anuta.components.database.models.descriptors.RelationDescriptor;
 import by.nalivajr.anuta.components.database.models.enums.SqliteDataType;
 import by.nalivajr.anuta.exceptions.NotAnnotatedEntityException;
@@ -38,7 +37,7 @@ public final class TableScriptGenerator {
      * @return string, representing table creation script;
      * @throws NotAnnotatedEntityException if class is not annotated with {@link Entity}
      */
-    public <T extends Identifiable> String generateRelationalTableScript(List<Class<T>> entityClasses) {
+    public String generateRelationalTableScript(List<Class<?>> entityClasses) {
         Set<String> tables = new HashSet<String>();
         StringBuilder builder = new StringBuilder();
         for (Class entityClass : entityClasses) {
@@ -129,7 +128,7 @@ public final class TableScriptGenerator {
      * @return string, representing table creation script;
      * @throws NotAnnotatedEntityException if class is not annotated with {@link Entity}
      */
-    public <T extends Identifiable> String generateNoSQLTableScript(List<Class<T>> entityClasses) {
+    public String generateNoSQLTableScript(List<Class<?>> entityClasses) {
         StringBuilder builder = new StringBuilder();
         for (Class entityClass : entityClasses) {
             builder.append(generateNoSQLTableScript(entityClass));
@@ -141,7 +140,7 @@ public final class TableScriptGenerator {
      * Generate script, which drops tables from database
      * @param entityClasses entity classes
      */
-    public <T extends Identifiable> String generateTableDeletionScript(List<Class<T>> entityClasses) {
+    public String generateTableDeletionScript(List<Class<?>> entityClasses) {
         StringBuilder builder = new StringBuilder();
         for (Class entityClass : entityClasses) {
             builder.append(generateDropTableScript(entityClass));
@@ -155,7 +154,7 @@ public final class TableScriptGenerator {
      * @return string, representing table creation script;
      * @throws NotAnnotatedEntityException if class is not annotated with {@link Entity}
      */
-    public <T> String generateRelationalTableScript(Class<T> cls) {
+    public String generateRelationalTableScript(Class<?> cls) {
         Anuta.databaseTools.validateEntityClass(cls);
         Entity entityAnnotation = cls.getAnnotation(Entity.class);
         String tableName = Anuta.databaseTools.getEntityTableName(cls, entityAnnotation);
@@ -183,7 +182,7 @@ public final class TableScriptGenerator {
      * @return string, representing table creation script;
      * @throws NotAnnotatedEntityException if class is not annotated with {@link Entity}
      */
-    public <T> String generateNoSQLTableScript(Class<T> cls) {
+    public String generateNoSQLTableScript(Class<?> cls) {
         Anuta.databaseTools.validateEntityClass(cls);
         Entity entityAnnotation = cls.getAnnotation(Entity.class);
         String tableName = Anuta.databaseTools.getEntityTableName(cls, entityAnnotation);
@@ -224,7 +223,7 @@ public final class TableScriptGenerator {
      * Generates script, which removes table for entity from database
      * @param cls entity class
      */
-    public <T> String generateDropTableScript(Class<T> cls) {
+    public String generateDropTableScript(Class<?> cls) {
         Entity entityAnnotation = cls.getAnnotation(Entity.class);
         if (entityAnnotation == null) {
             throw new NotAnnotatedEntityException(cls);
@@ -233,7 +232,7 @@ public final class TableScriptGenerator {
         return String.format("DROP TABLE %s;", tableName);
     }
 
-    public <T> String buildJsonDataColumnName(Class<T> cls) {
+    public String buildJsonDataColumnName(Class<?> cls) {
         return cls.getSimpleName() + JSON_DATA_COLUMN_SUFFIX;
     }
 

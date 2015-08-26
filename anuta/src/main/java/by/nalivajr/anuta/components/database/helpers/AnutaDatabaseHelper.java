@@ -9,7 +9,6 @@ import android.util.Log;
 import java.util.LinkedList;
 import java.util.List;
 
-import by.nalivajr.anuta.components.database.models.Identifiable;
 import by.nalivajr.anuta.tools.Anuta;
 
 /**
@@ -20,7 +19,7 @@ public abstract class AnutaDatabaseHelper extends SQLiteOpenHelper {
 
     private static final String TAG = AnutaDatabaseHelper.class.getSimpleName();
 
-    private List<Class<Identifiable>> entityClasses = new LinkedList<Class<Identifiable>>();
+    private List<Class<?>> entityClasses = new LinkedList<Class<?>>();
 
     public AnutaDatabaseHelper(Context context, String name, SQLiteDatabase.CursorFactory factory, int version) {
         super(context, name, factory, version);
@@ -34,12 +33,12 @@ public abstract class AnutaDatabaseHelper extends SQLiteOpenHelper {
      * Generates script for creating tables for registered entities
      * @param classes entities classes
      */
-    protected abstract  <T extends Identifiable> String getTableCreationScript(List<Class<T>> classes);
+    protected abstract String getTableCreationScript(List<Class<?>> classes);
 
     /**
      * Creates tables which are required to store data
      */
-    protected <T extends Identifiable> void createTablesForClasses(SQLiteDatabase db, List<Class<T>> classes) {
+    protected void createTablesForClasses(SQLiteDatabase db, List<Class<?>> classes) {
         String sql = getTableCreationScript(classes);
         executeScript(db, sql);
     }
@@ -47,7 +46,7 @@ public abstract class AnutaDatabaseHelper extends SQLiteOpenHelper {
     /**
      * Deletes tables for entities
      */
-    protected <T extends Identifiable> void deleteEntitiesTables(SQLiteDatabase db) {
+    protected void deleteEntitiesTables(SQLiteDatabase db) {
         String sql = Anuta.databaseTools.generateTableDeletionScript(entityClasses);
         executeScript(db, sql);
     }
@@ -79,7 +78,7 @@ public abstract class AnutaDatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
-    public void setEntityClasses(List<Class<Identifiable>> classes) {
+    public void setEntityClasses(List<Class<?>> classes) {
         entityClasses.clear();
         if (classes != null) {
             Log.i(TAG, "Applying entity classes " + classes.toString());

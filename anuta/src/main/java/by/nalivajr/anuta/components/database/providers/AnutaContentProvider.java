@@ -18,7 +18,6 @@ import java.util.Set;
 
 import by.nalivajr.anuta.annonatations.database.Entity;
 import by.nalivajr.anuta.components.database.helpers.AnutaDatabaseHelper;
-import by.nalivajr.anuta.components.database.models.Identifiable;
 import by.nalivajr.anuta.exceptions.InvalidMimeCodeException;
 import by.nalivajr.anuta.exceptions.NotAnnotatedEntityException;
 import by.nalivajr.anuta.tools.Anuta;
@@ -43,7 +42,7 @@ public abstract class AnutaContentProvider extends ContentProvider {
     @Override
     public boolean onCreate() {
         helper = createDatabaseHelper();
-        List<Class<Identifiable>> entityClasses = getEntityClasses();
+        List<Class<?>> entityClasses = getEntityClasses();
         helper.setEntityClasses(entityClasses);
         populateMap(entityClasses);
         return true;
@@ -53,7 +52,7 @@ public abstract class AnutaContentProvider extends ContentProvider {
      * Provides list of classes which is managed by this provider
      * @return list of classes which is managed by this provider
      */
-    public abstract <T> List<Class<T>> getEntityClasses();
+    public abstract List<Class<?>> getEntityClasses();
 
     protected abstract AnutaDatabaseHelper createDatabaseHelper();
 
@@ -160,7 +159,7 @@ public abstract class AnutaContentProvider extends ContentProvider {
         getContext().getContentResolver().notifyChange(uri, null);
     }
 
-    protected <T> void populateMap(List<Class<T>> entityClasses) {
+    protected void populateMap(List<Class<?>> entityClasses) {
 
         int start = 10001;
         int step = 10000;
@@ -172,7 +171,7 @@ public abstract class AnutaContentProvider extends ContentProvider {
         Map<String, String> relationTables = new HashMap<String, String>();
 
         int code = start;
-        for (Class<T> cls : entityClasses) {
+        for (Class<?> cls : entityClasses) {
             Entity annotation = cls.getAnnotation(Entity.class);
             if (annotation == null) {
                 throw new NotAnnotatedEntityException(cls);

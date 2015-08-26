@@ -6,7 +6,6 @@ import android.database.sqlite.SQLiteDatabase;
 
 import java.util.List;
 
-import by.nalivajr.anuta.components.database.models.Identifiable;
 import by.nalivajr.anuta.tools.Anuta;
 
 /**
@@ -29,7 +28,7 @@ public abstract class AnutaNoSQLDatabaseHelper extends AnutaDatabaseHelper {
     }
 
     @Override
-    protected <T extends Identifiable> String getTableCreationScript(List<Class<T>> classes) {
+    protected String getTableCreationScript(List<Class<?>> classes) {
         return Anuta.databaseTools.generateNoSQLTableScript(classes);
     }
 }

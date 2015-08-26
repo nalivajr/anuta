@@ -27,10 +27,9 @@ import by.nalivajr.anuta.annonatations.database.Id;
 import by.nalivajr.anuta.annonatations.database.ManyToMany;
 import by.nalivajr.anuta.annonatations.database.OneToMany;
 import by.nalivajr.anuta.annonatations.database.RelatedEntity;
+import by.nalivajr.anuta.components.database.models.Persistable;
 import by.nalivajr.anuta.components.database.models.descriptors.ColumnDescriptor;
 import by.nalivajr.anuta.components.database.models.descriptors.EntityDescriptor;
-import by.nalivajr.anuta.components.database.models.Identifiable;
-import by.nalivajr.anuta.components.database.models.Persistable;
 import by.nalivajr.anuta.components.database.models.enums.SqliteDataType;
 import by.nalivajr.anuta.exceptions.IncorrectMappingException;
 import by.nalivajr.anuta.exceptions.InvalidDataTypeException;
@@ -60,7 +59,7 @@ public final class DatabaseTools {
      * @return string, representing table creation script;
      * @throws NotAnnotatedEntityException if class is not annotated with {@link Entity}
      */
-    public <T extends Identifiable> String generateRelationalTableScript(List<Class<T>> entityClasses) {
+    public String generateRelationalTableScript(List<Class<?>> entityClasses) {
         return tableScriptGenerator.generateRelationalTableScript(entityClasses);
     }
 
@@ -70,7 +69,7 @@ public final class DatabaseTools {
      * @return string, representing table creation script;
      * @throws NotAnnotatedEntityException if class is not annotated with {@link Entity}
      */
-    public <T extends Identifiable> String generateNoSQLTableScript(List<Class<T>> entityClasses) {
+    public String generateNoSQLTableScript(List<Class<?>> entityClasses) {
         return tableScriptGenerator.generateNoSQLTableScript(entityClasses);
     }
 
@@ -78,7 +77,7 @@ public final class DatabaseTools {
      * Generate script, which drops tables from database
      * @param entityClasses entity classes
      */
-    public <T extends Identifiable> String generateTableDeletionScript(List<Class<T>> entityClasses) {
+    public String generateTableDeletionScript(List<Class<?>> entityClasses) {
         return tableScriptGenerator.generateTableDeletionScript(entityClasses);
     }
 
@@ -88,7 +87,7 @@ public final class DatabaseTools {
      * @return string, representing table creation script;
      * @throws NotAnnotatedEntityException if class is not annotated with {@link Entity}
      */
-    public <T> String generateRelationalTableScript(Class<T> cls) {
+    public String generateRelationalTableScript(Class<?> cls) {
         return tableScriptGenerator.generateRelationalTableScript(cls);
     }
 
@@ -98,7 +97,7 @@ public final class DatabaseTools {
      * @return string, representing table creation script;
      * @throws NotAnnotatedEntityException if class is not annotated with {@link Entity}
      */
-    public <T> String generateNoSQLTableScript(Class<T> cls) {
+    public String generateNoSQLTableScript(Class<?> cls) {
         return tableScriptGenerator.generateNoSQLTableScript(cls);
     }
 
@@ -106,11 +105,11 @@ public final class DatabaseTools {
      * Generates script, which removes table for entity from database
      * @param cls entity class
      */
-    public <T> String generateDropTableScript(Class<T> cls) {
+    public String generateDropTableScript(Class<?> cls) {
         return tableScriptGenerator.generateDropTableScript(cls);
     }
 
-    private <T> void validateColumnFields(List<Field> columnFields, Class<T> cls) {
+    private void validateColumnFields(List<Field> columnFields, Class<?> cls) {
         Set<String> columnNames = new HashSet<String>();
         int ids = 0;
         for(Field field : columnFields) {
@@ -142,25 +141,25 @@ public final class DatabaseTools {
         }
     }
 
-    public <T> String buildJsonDataColumnName(Class<T> cls) {
+    public String buildJsonDataColumnName(Class<?> cls) {
         return tableScriptGenerator.buildJsonDataColumnName(cls);
     }
 
     /**
      * Extract all fields, which are annotated with {@link Id} or {@link Column} and should be persisted. Do not extracts _id field
      */
-    public <T> List<Field> extractFields(Class<T> cls) {
+    public List<Field> extractFields(Class<?> cls) {
         return extractColumnsFields(cls, null);
     }
 
     /**
      * Extract all fields, which are annotated with {@link Id} or {@link Column} having {@link Column#index()} set to true and should be persisted. Do not extracts _id field
      */
-    public  <T> List<Field> extractIndexedFields(Class<T> cls) {
+    public List<Field> extractIndexedFields(Class<?> cls) {
         return extractColumnsFields(cls, true);
     }
 
-    private <T> List<Field> extractColumnsFields(Class<T> cls, Boolean indexedOnly) {
+    private List<Field> extractColumnsFields(Class<?> cls, Boolean indexedOnly) {
         Entity entityAnnotation = cls.getAnnotation(Entity.class);
         if (entityAnnotation == null) {
             throw new NotAnnotatedEntityException(cls);

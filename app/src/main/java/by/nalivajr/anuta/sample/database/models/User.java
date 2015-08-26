@@ -36,7 +36,7 @@ public class User {
     @OneToMany
     private Collection<Group> curatingGroup;
 
-    @ManyToMany(lazyFetch = false)
+    @ManyToMany
     private Set<Group> attendingGroup;
 
     @ManyToMany

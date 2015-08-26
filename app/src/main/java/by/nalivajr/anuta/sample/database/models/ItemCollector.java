@@ -7,6 +7,7 @@ import java.util.Collection;
 
 import by.nalivajr.anuta.annonatations.database.Column;
 import by.nalivajr.anuta.annonatations.database.Entity;
+import by.nalivajr.anuta.annonatations.database.FetchType;
 import by.nalivajr.anuta.annonatations.database.Id;
 import by.nalivajr.anuta.annonatations.database.OneToMany;
 import by.nalivajr.anuta.sample.database.Contract;
@@ -26,7 +27,7 @@ public class ItemCollector extends ArrayList<SampleItem> {
     @Column
     private String collectorId;
 
-    @OneToMany(lazyFetch = false)
+    @OneToMany(fetchType = FetchType.EAGER)
     private Collection<SampleItem> items = this;
 
     public Long getRowId() {

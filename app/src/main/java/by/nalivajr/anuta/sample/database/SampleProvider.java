@@ -33,16 +33,16 @@ public class SampleProvider extends AnutaRelationalProvider {
     }
 
     @Override
-    public <T> List<Class<T>> getEntityClasses() {
-        List<Class<T>> classes = new ArrayList<Class<T>>();
-        classes.add((Class<T>) SubSubItem.class);
-        classes.add((Class<T>) Item.class);
-        classes.add((Class<T>) User.class);
-        classes.add((Class<T>) Game.class);
-        classes.add((Class<T>) Group.class);
-        classes.add((Class<T>) ItemCollector.class);
-        classes.add((Class<T>) SampleItem.class);
-        classes.add((Class<T>) GameGroup.class);
+    public List<Class<?>> getEntityClasses() {
+        List<Class<?>> classes = new ArrayList<Class<?>>();
+        classes.add(SubSubItem.class);
+        classes.add(Item.class);
+        classes.add(User.class);
+        classes.add(Game.class);
+        classes.add(Group.class);
+        classes.add(ItemCollector.class);
+        classes.add(SampleItem.class);
+        classes.add(GameGroup.class);
         return classes;
     }
 }

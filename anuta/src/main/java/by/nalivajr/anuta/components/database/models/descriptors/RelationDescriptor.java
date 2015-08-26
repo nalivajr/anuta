@@ -3,6 +3,7 @@ package by.nalivajr.anuta.components.database.models.descriptors;
 import java.lang.reflect.Field;
 
 import by.nalivajr.anuta.annonatations.database.Column;
+import by.nalivajr.anuta.annonatations.database.FetchType;
 import by.nalivajr.anuta.annonatations.database.ManyToMany;
 import by.nalivajr.anuta.annonatations.database.OneToMany;
 import by.nalivajr.anuta.annonatations.database.RelatedEntity;
@@ -28,25 +29,25 @@ public class RelationDescriptor {
     private SqliteDataType relationReferencedColumnType;
     private Class<?> relatedEntity;
     private Class<?> relationHoldingEntity;
-    private boolean lazyFetch;
+    private FetchType fetchType;
 
     public RelationDescriptor(Class<?> entityClass, Field field) {
         RelatedEntity otoAnno = field.getAnnotation(RelatedEntity.class);
         if (otoAnno != null) {
             buildOnRelatedEntity(otoAnno, field, entityClass);
-            lazyFetch = otoAnno.lazyFetch();
+            fetchType = otoAnno.fetchType();
             return;
         }
         OneToMany otmAnno = field.getAnnotation(OneToMany.class);
         if (otmAnno != null) {
             buildOnOneToMany(otmAnno, field, entityClass);
-            lazyFetch = otmAnno.lazyFetch();
+            fetchType = otmAnno.fetchType();
             return;
         }
         ManyToMany mtmAnno = field.getAnnotation(ManyToMany.class);
         if (mtmAnno != null) {
             buildOnManyToMany(mtmAnno, field, entityClass);
-            lazyFetch = mtmAnno.lazyFetch();
+            fetchType = mtmAnno.fetchType();
         }
     }
 
@@ -211,7 +212,7 @@ public class RelationDescriptor {
         return relationHoldingEntity;
     }
 
-    public boolean isLazyFetch() {
-        return lazyFetch;
+    public FetchType getFetchType() {
+        return fetchType;
     }
 }

@@ -4,10 +4,9 @@ import android.content.Context;
 import android.database.DatabaseErrorHandler;
 import android.database.sqlite.SQLiteDatabase;
 
-import by.nalivajr.anuta.components.database.models.Identifiable;
-import by.nalivajr.anuta.tools.Anuta;
-
 import java.util.List;
+
+import by.nalivajr.anuta.tools.Anuta;
 
 /**
  * Created by Sergey Nalivko.
@@ -26,7 +25,7 @@ public abstract class AnutaRelationalDatabaseHelper extends AnutaDatabaseHelper 
     }
 
     @Override
-    protected <T extends Identifiable> String getTableCreationScript(List<Class<T>> classes) {
+    protected String getTableCreationScript(List<Class<?>> classes) {
         return Anuta.databaseTools.generateRelationalTableScript(classes);
     }
 }

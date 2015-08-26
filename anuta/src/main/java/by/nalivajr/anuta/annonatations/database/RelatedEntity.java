@@ -32,7 +32,7 @@ public @interface RelatedEntity {
     /**
      * Specifies the strategy of data loading. If lazy that related entity won't be loaded
      */
-    public boolean lazyFetch() default true;
+    public FetchType fetchType() default FetchType.LAZY;
 
     /**
      * Specifies the strategy of data persisting. By default {@link CascadeType#INSERT} and
