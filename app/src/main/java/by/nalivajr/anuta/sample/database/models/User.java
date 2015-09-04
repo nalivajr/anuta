@@ -5,6 +5,7 @@ import android.provider.BaseColumns;
 import java.util.Collection;
 import java.util.Set;
 
+import by.nalivajr.anuta.annonatations.database.CascadeType;
 import by.nalivajr.anuta.annonatations.database.Column;
 import by.nalivajr.anuta.annonatations.database.Entity;
 import by.nalivajr.anuta.annonatations.database.Id;
@@ -33,7 +34,7 @@ public class User {
     @RelatedEntity(relationColumnName = "gender", relationReferencedColumnName = "gender", dependentEntityClass = User.class)
     private Group genderGroup;
 
-    @OneToMany
+    @OneToMany(cascadeType = CascadeType.ALL)
     private Collection<Group> curatingGroup;
 
     @ManyToMany

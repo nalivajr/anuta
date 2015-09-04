@@ -2,6 +2,10 @@ package by.nalivajr.anuta.test.models;
 
 import android.provider.BaseColumns;
 
+import java.util.Arrays;
+import java.util.List;
+
+import by.nalivajr.anuta.annonatations.database.CascadeType;
 import by.nalivajr.anuta.annonatations.database.Column;
 import by.nalivajr.anuta.annonatations.database.Entity;
 import by.nalivajr.anuta.annonatations.database.Id;
@@ -26,8 +30,8 @@ public class Technology {
     @RelatedEntity(dependentEntityClass = Technology.class)
     private Department department;
 
-    @ManyToMany(relationColumnName = "name")
-    private Tag[] tags;
+    @ManyToMany(relationColumnName = "name", cascadeType = CascadeType.ALL)
+    private List<Tag> tags;
 
     public String getName() {
         return name;
@@ -46,10 +50,16 @@ public class Technology {
     }
 
     public Tag[] getTags() {
-        return tags;
+        if (this.tags == null) {
+            return null;
+        }
+        return tags.toArray(new Tag[this.tags.size()]);
     }
 
     public void setTags(Tag[] tags) {
-        this.tags = tags;
+        this.tags = null;
+        if (tags != null) {
+            this.tags = Arrays.asList(tags);
+        }
     }
 }

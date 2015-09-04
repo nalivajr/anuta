@@ -185,6 +185,58 @@ public class EntityManagerTest extends ProviderTestCase2<TestProvider> {
         assertTrue(entityManager.findAll(Employee.class).size() == 5);
     }
 
+    public void testDeleteCascade() {
+        Employee employee1 = createEmployee("Employee One", "Male", new Date(), "e1");
+        Employee employee2 = createEmployee("Employee Two", "Female", new Date(), "e2");
+        Employee employee3 = createEmployee("Employee Three", "Male", new Date(), "e3");
+        Employee employee4 = createEmployee("Employee Four", "Female", new Date(), "e4");
+        Employee employee5 = createEmployee("Employee Five", "Male", new Date(), "e5");
+
+        Department devDepartment = new Department();
+        devDepartment.setMaster(employee1);
+        devDepartment.setName("Development department");
+        devDepartment.setDepartmentEmployees(Arrays.asList(employee1, employee3, employee5));
+
+        Technology webTechnology = new Technology();
+        String technologyName = "Web Enterprise";
+        webTechnology.setName(technologyName);
+        List<Tag> technologyTags = createTags("HTML", "CSS", "JAVA", "JAVASCRIPT");
+        webTechnology.setTags(technologyTags.toArray(new Tag[]{}));
+
+        devDepartment.setTechnologies(new Technology[]{webTechnology});
+
+        entityManager.save(devDepartment);
+
+        Department qaDepartment = new Department();
+        qaDepartment.setMaster(employee2);
+        employee2.setDepartment(qaDepartment);
+        qaDepartment.setName("QA department");
+        qaDepartment.setDepartmentEmployees(Arrays.asList(employee2, employee4, employee1, employee3));
+
+        Technology qaTechnology = new Technology();
+        String qaTechnologyName = "QA";
+        qaTechnology.setName(qaTechnologyName);
+        List<Tag> qaTechnologyTags = createTags("Selenium", "Monkey Runner");
+        qaTechnology.setTags(qaTechnologyTags.toArray(new Tag[]{}));
+        qaDepartment.setTechnologies(new Technology[]{qaTechnology});
+
+        entityManager.save(employee2);
+
+        assertTrue(entityManager.findAll(Department.class).size() == 2);
+        assertTrue(entityManager.findAll(Technology.class).size() == 2);
+        assertTrue(entityManager.findAll(Tag.class).size() == technologyTags.size() + qaTechnologyTags.size());
+        assertTrue(entityManager.findAll(Employee.class).size() == 5);
+
+        entityManager.delete(devDepartment);
+        devDepartment = entityManager.find(Department.class, "1");
+        assertNull(devDepartment);
+
+        assertTrue(entityManager.findAll(Department.class).size() == 1);
+        assertTrue(entityManager.findAll(Technology.class).size() == 1);
+        assertTrue(entityManager.findAll(Tag.class).size() == qaTechnologyTags.size());
+        assertTrue(entityManager.findAll(Employee.class).size() == 5);
+    }
+
     @NonNull
     private Employee createEmployee(String name, String gender, Date birthDate, String uid) {
         Employee employee1 = new Employee();

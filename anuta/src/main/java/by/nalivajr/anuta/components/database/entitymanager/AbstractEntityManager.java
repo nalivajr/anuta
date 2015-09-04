@@ -18,10 +18,13 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import by.nalivajr.anuta.components.database.cursor.AnutaBaseEntityCursor;
 import by.nalivajr.anuta.components.database.cursor.AnutaEntityCursor;
@@ -34,6 +37,7 @@ import by.nalivajr.anuta.components.database.models.session.DatabaseAccessSessio
 import by.nalivajr.anuta.components.database.models.session.SimpleDatabaseAccessSession;
 import by.nalivajr.anuta.components.database.query.AnutaQuery;
 import by.nalivajr.anuta.components.database.query.AnutaQueryBuilder;
+import by.nalivajr.anuta.components.database.query.AnutaQueryWithUri;
 import by.nalivajr.anuta.components.database.query.BaseAnutaQueryBuilder;
 import by.nalivajr.anuta.components.database.stub.LazyInitializationCollection;
 import by.nalivajr.anuta.components.database.stub.RelatedEntitiesProxyFactory;
@@ -65,7 +69,7 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
         for (EntityDescriptor descriptor : entityDescriptors) {
             entityToDescriptor.put(descriptor.getEntityClass(), descriptor);
         }
-        this.relationsHelper = new EntityManagerRelationsHelper(entityToDescriptor);
+        this.relationsHelper = new EntityManagerRelationsHelper(this, entityToDescriptor);
         session = new ThreadLocal<DatabaseAccessSession>();
     }
 
@@ -168,10 +172,14 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
             Log.w(TAG, "Attempt to delete null entity");
             return false;
         }
+        checkClassRegistered(entity.getClass());
 
-        EntityDescriptor descriptor = entityToDescriptor.get(entity.getClass());
-        ArrayList<ContentProviderOperation> operations = generateOperationsToDelete(entity, descriptor);
-        return applyOperations(operations, descriptor.getAuthority()).length != 0;
+        List<AnutaQuery> deletionQueries = relationsHelper.buildDeletionQueries(entity);
+        boolean res = true;
+        for (AnutaQuery query : deletionQueries) {
+            res &= executeQuery(query);
+        }
+        return res;
     }
 
     @Override
@@ -194,9 +202,12 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
         Class<?> entityClass = validateAllEntitiesSameClass(entities);
         checkClassRegistered(entityClass);
         EntityDescriptor descriptor = entityToDescriptor.get(entityClass);
+
+        boolean sessionCreator = openSession();
         for (T entity: entities) {
             saveEntity(entity, descriptor);
         }
+        closeSession(sessionCreator);
         return entities;
     }
 
@@ -210,10 +221,11 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
         checkClassRegistered(entityClass);
         EntityDescriptor descriptor = entityToDescriptor.get(entityClass);
 
+        boolean sessionCreator = openSession();
         for (T entity : entities) {
             updateEntity(entity, descriptor);
         }
-
+        closeSession(sessionCreator);
         return entities;
     }
 
@@ -223,14 +235,32 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
             Log.w(TAG, "Nothing to delete. Collection is null or empty");
             return false;
         }
-        Class<?> entityClass = validateAllEntitiesSameClass(entities);
+        validateAllEntitiesSameClass(entities);
 
-        EntityDescriptor descriptor = entityToDescriptor.get(entityClass);
-        ArrayList<ContentProviderOperation> operations = new ArrayList<ContentProviderOperation>();
+        Map<Class<?>, Set> entitiesMap = new LinkedHashMap<Class<?>, Set>();
+        Map<Class<?>, Set<Long>> idsMap = new LinkedHashMap<Class<?>, Set<Long>>();
+
         for (T entity : entities) {
-            operations.addAll(generateOperationsToDelete(entity, descriptor));
+            if (entity == null) {
+                continue;
+            }
+            Map<Class<?>, Set<Long>> tIdMap = relationsHelper.expandEntity(entity, entitiesMap);
+            for (Map.Entry<Class<?>, Set<Long>> idEntry : tIdMap.entrySet()) {
+                Set<Long> allIdsSet = idsMap.get(idEntry.getKey());
+                if (allIdsSet == null) {
+                    allIdsSet = new HashSet<Long>();
+                    idsMap.put(idEntry.getKey(), allIdsSet);
+                }
+                allIdsSet.addAll(idEntry.getValue());
+            }
         }
-        return applyOperations(operations, descriptor.getAuthority()).length != 0;
+
+        List<AnutaQuery> queries = relationsHelper.buildDeletionQueries(idsMap, entitiesMap);
+        boolean res = true;
+        for (AnutaQuery query : queries) {
+            res &= executeQuery(query);
+        }
+        return res;
     }
 
     @Override
@@ -325,7 +355,7 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
     @Override
     public <T> boolean executeQuery(AnutaQuery<T> query) {
         checkClassRegistered(query.getTargetClass());
-        Uri uri = getUri(query.getTargetClass());
+        Uri uri = query instanceof AnutaQueryWithUri ? ((AnutaQueryWithUri) query).getUri() : getUri(query.getTargetClass());
 
         executeQuery(query, uri);
         return false;
@@ -564,12 +594,8 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
         Class<?> entityClass = entity.getClass();
         EntityDescriptor entityDescriptor = entityToDescriptor.get(entityClass);
 
-        List<Field> oneRelationFields = new LinkedList<Field>();
-
-        oneRelationFields.addAll(entityDescriptor.getEntityRelatedFields());
         putDeleteRelatedEntityRelationOperations(entity, operations, entityClass, entityDescriptor);
-
-        oneRelationFields.addAll(entityDescriptor.getOneToManyFields());
+        putAddRelatedEntityOperation(entity, operations, entityClass, entityDescriptor);
 
         putDeleteOneToManyRelationOperations(entity, operations, entityClass, entityDescriptor);
         putAddOneToManyOperation(entity, operations, entityClass, entityDescriptor);

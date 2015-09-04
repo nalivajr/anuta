@@ -2,8 +2,10 @@ package by.nalivajr.anuta.test.models;
 
 import android.provider.BaseColumns;
 
+import java.util.Arrays;
 import java.util.List;
 
+import by.nalivajr.anuta.annonatations.database.CascadeType;
 import by.nalivajr.anuta.annonatations.database.Column;
 import by.nalivajr.anuta.annonatations.database.Entity;
 import by.nalivajr.anuta.annonatations.database.Id;
@@ -31,8 +33,8 @@ public class Department {
     @OneToMany(relationReferencedColumnName = "departmentId")
     private List<Employee> departmentEmployees;
 
-    @OneToMany
-    private Technology[] technologies;
+    @OneToMany(cascadeType = CascadeType.ALL)
+    private List<Technology> technologies;
 
     public String getName() {
         return name;
@@ -51,11 +53,17 @@ public class Department {
     }
 
     public Technology[] getTechnologies() {
-        return technologies;
+        if (technologies == null) {
+            return null;
+        }
+        return technologies.toArray(new Technology[technologies.size()]);
     }
 
     public void setTechnologies(Technology[] technologies) {
-        this.technologies = technologies;
+        this.technologies = null;
+        if (technologies != null) {
+            this.technologies = Arrays.asList(technologies);
+        }
     }
 
     public List<Employee> getDepartmentEmployees() {

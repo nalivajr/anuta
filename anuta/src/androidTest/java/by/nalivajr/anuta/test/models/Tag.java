@@ -12,6 +12,9 @@ import by.nalivajr.anuta.test.content.TestContract;
 @Entity(authority = TestContract.AUTHORITY)
 public class Tag {
 
+    @Column
+    private Long _id;
+
     @Id
     @Column
     private String name;

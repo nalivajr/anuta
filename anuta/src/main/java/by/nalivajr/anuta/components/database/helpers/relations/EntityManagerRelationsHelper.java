@@ -3,18 +3,31 @@ package by.nalivajr.anuta.components.database.helpers.relations;
 import android.content.ContentProviderOperation;
 import android.content.ContentValues;
 import android.net.Uri;
+import android.provider.BaseColumns;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import by.nalivajr.anuta.components.database.entitymanager.AbstractEntityManager;
+import by.nalivajr.anuta.components.database.entitymanager.AnutaEntityManager;
 import by.nalivajr.anuta.components.database.models.descriptors.EntityDescriptor;
 import by.nalivajr.anuta.components.database.models.descriptors.RelationDescriptor;
+import by.nalivajr.anuta.components.database.query.AnutaQuery;
+import by.nalivajr.anuta.components.database.query.AnutaQueryBuilder;
+import by.nalivajr.anuta.components.database.query.AnutaQueryWithUri;
+import by.nalivajr.anuta.components.database.query.AnutaQueryWrapper;
+import by.nalivajr.anuta.components.database.stub.LazyInitializationCollection;
 import by.nalivajr.anuta.tools.Anuta;
+import by.nalivajr.anuta.utils.CollectionsUtil;
 
 /**
  * Created by Sergey Nalivko.
@@ -22,9 +35,11 @@ import by.nalivajr.anuta.tools.Anuta;
  */
 public final class EntityManagerRelationsHelper {
     private final Map<Class<?>, EntityDescriptor> entityToDescriptor;
+    private AnutaEntityManager entityManager;
 
-    public EntityManagerRelationsHelper(Map<Class<?>, EntityDescriptor> entityToDescriptor) {
+    public EntityManagerRelationsHelper(AnutaEntityManager entityManager, Map<Class<?>, EntityDescriptor> entityToDescriptor) {
         this.entityToDescriptor = entityToDescriptor;
+        this.entityManager = entityManager;
     }
 
     /**
@@ -38,6 +53,9 @@ public final class EntityManagerRelationsHelper {
         Object relatedEntities = Anuta.reflectionTools.getValue(field, entity);
         if (relatedEntities == null) {
             return Collections.EMPTY_LIST;
+        }
+        if (relatedEntities instanceof LazyInitializationCollection) {
+            relatedEntities = entityManager.initialize((Collection) relatedEntities);
         }
         Collection relatedCollection = null;
         if (relatedEntities.getClass().isArray()) {
@@ -213,7 +231,7 @@ public final class EntityManagerRelationsHelper {
         }
     }
 
-    public  <T> void putAddManyToManyOperation(T entity, ArrayList<ContentProviderOperation> operations,
+    public <T> void putAddManyToManyOperation(T entity, ArrayList<ContentProviderOperation> operations,
                                                Class<?> entityClass, EntityDescriptor descriptor) {
         List<Field> fields = descriptor.getManyToManyFields();
         for (Field field : fields) {
@@ -304,5 +322,212 @@ public final class EntityManagerRelationsHelper {
             deleteRelationBuilder.withSelection(selection, selectionArgs);
             operations.add(deleteRelationBuilder.build());
         }
+    }
+
+    /**
+     * Expands entity and extracts all entities which is going to be deleted
+     * @param entity the root entity to deleted
+     * @param entitiesMap the map, which will be used to store all entities which is going to be deleted
+     * @return the map, representing set of ids of entities to be deleted
+     */
+    public <T> Map<Class<?>, Set<Long>> expandEntity(T entity, Map<Class<?>, Set> entitiesMap) {
+        Map<Class<?>, Set<Long>> mappedIds = new HashMap<Class<?>, Set<Long>>();
+        expandForDelete(mappedIds, entitiesMap, entity);
+        return mappedIds;
+    }
+
+    private <T> void expandForDelete(Map<Class<?>, Set<Long>> map, Map<Class<?>, Set> entitiesMap, T entity) {
+        if (entity == null) {
+            return;
+        }
+        Long rowId = Anuta.databaseTools.getRowId(entity);
+        if (rowId == null || rowId == 0) {
+            return;
+        }
+        Set<Long> ids = map.get(entity.getClass());
+        if (ids == null) {
+            ids = new HashSet<Long>();
+            map.put(entity.getClass(), ids);
+        }
+        if (ids.contains(rowId)) {
+            return;
+        }
+        Set entities = entitiesMap.get(entity.getClass());
+        if (entities == null) {
+            entities = new HashSet();
+            entitiesMap.put(entity.getClass(), entities);
+        }
+        ids.add(rowId);
+        entities.add(entity);
+
+        EntityDescriptor descriptor = entityToDescriptor.get(entity.getClass());
+        expandRelatedEntityToDelete(map, entitiesMap, entity, descriptor);
+
+        List<Field> fields = descriptor.getOneToManyFields();
+        expandRelatedCollectionToDelete(map, entitiesMap, entity, descriptor, fields);
+
+        fields = descriptor.getManyToManyFields();
+        expandRelatedCollectionToDelete(map, entitiesMap, entity, descriptor, fields);
+    }
+
+    private <T> void expandRelatedEntityToDelete(Map<Class<?>, Set<Long>> map, Map<Class<?>, Set> entitiesMap,
+                                                 T entity, EntityDescriptor descriptor) {
+        List<Field> fields = descriptor.getEntityRelatedFields();
+        for (Field field : fields) {
+            RelationDescriptor relationDescriptor = descriptor.getRelationDescriptorForField(field);
+            if (!relationDescriptor.isCascadeDelete()) {
+                continue;
+            }
+            Object related = Anuta.reflectionTools.getValue(field, entity);
+            expandForDelete(map, entitiesMap, related);
+        }
+    }
+
+    private <T> void expandRelatedCollectionToDelete(Map<Class<?>, Set<Long>> map, Map<Class<?>, Set> entitiesMap,
+                                                     T entity, EntityDescriptor descriptor, List<Field> fields) {
+        for (Field field : fields) {
+            RelationDescriptor relationDescriptor = descriptor.getRelationDescriptorForField(field);
+            if (!relationDescriptor.isCascadeDelete()) {
+                continue;
+            }
+            Collection items = getRelatedEntitiesAsCollection(entity, field);
+            for (Object item : items) {
+                expandForDelete(map, entitiesMap, item);
+            }
+        }
+    }
+
+    /**
+     * Builds queries, which removes entity and all related entities (if cascade deletion) and removes all relation foreign keys
+     * @param entity the entity to remove
+     * @return list of queries to remove the entity
+     */
+    public  <T> List<AnutaQuery> buildDeletionQueries(T entity) {
+        Map<Class<?>, Set> entitiesMap = new LinkedHashMap<Class<?>, Set>();
+        Map<Class<?>, Set<Long>> idsMap = expandEntity(entity, entitiesMap);
+
+        List<AnutaQuery> queries = buildDeletionQueries(idsMap, entitiesMap);
+
+        return queries;
+    }
+
+    /**
+     * Builds queries, which removes entity and all related entities (if cascade deletion) and removes all relation foreign keys
+     * @param idsMap the map of ids of entities to remove
+     * @param entitiesMap the map of entities to remove. Must contain entities for ids provided in first param
+     * @return list of queries to remove the entity
+     */
+    public  <T> List<AnutaQuery> buildDeletionQueries(Map<Class<?>, Set<Long>> idsMap, Map<Class<?>, Set> entitiesMap) {
+
+        Map<Uri, AnutaQueryBuilder> deleteQueryBuilderMap = new LinkedHashMap<Uri, AnutaQueryBuilder>();
+        Map<Class<?>, AnutaQueryBuilder> updateQueryBuilderMap = new LinkedHashMap<Class<?>, AnutaQueryBuilder>();
+        Map<AnutaQueryBuilder, ContentValues> updateRelationsValuesMap = new LinkedHashMap<AnutaQueryBuilder, ContentValues>();
+
+        for (Class<?> cls : idsMap.keySet()) {
+            AnutaQueryBuilder queryBuilder = entityManager.getQueryBuilder(cls);
+            Set<Long> ids = idsMap.get(cls);
+            String[] idsArgs = CollectionsUtil.toStringArray(ids);
+            queryBuilder.or(queryBuilder.in(BaseColumns._ID, idsArgs));
+            deleteQueryBuilderMap.put(entityToDescriptor.get(cls).getTableUri(), queryBuilder);
+        }
+
+        for (Class<?> cls : entitiesMap.keySet()) {
+            Set entitiesToDelete = entitiesMap.get(cls);
+            EntityDescriptor descriptor = entityToDescriptor.get(cls);
+
+            for (Object entityToDelete : entitiesToDelete) {
+
+                updateRemoveRelationQueries(updateQueryBuilderMap, updateRelationsValuesMap, cls, entityToDelete, descriptor);
+
+                updateRemoveManyToManyRelationQuery(deleteQueryBuilderMap, cls, entityToDelete, descriptor);
+            }
+        }
+
+        List<AnutaQuery> queries = new LinkedList<AnutaQuery>();
+
+        for (final Map.Entry<Uri, AnutaQueryBuilder> entry : deleteQueryBuilderMap.entrySet()) {
+            AnutaQuery query = entry.getValue().buildDelete();
+            query = wrapQuery(query, entry.getKey());
+            queries.add(query);
+        }
+
+        for (Map.Entry<Class<?>, AnutaQueryBuilder> entry : updateQueryBuilderMap.entrySet()) {
+            AnutaQueryBuilder queryBuilder = entry.getValue();
+            ContentValues values = updateRelationsValuesMap.get(queryBuilder);
+            AnutaQuery query = queryBuilder.buildUpdate(values);
+            queries.add(query);
+        }
+        return queries;
+    }
+
+    private void updateRemoveRelationQueries(Map<Class<?>, AnutaQueryBuilder> updateQueryBuilderMap,
+                                             Map<AnutaQueryBuilder, ContentValues> updateRelationsValuesMap,
+                                             Class<?> cls, Object entityToDelete, EntityDescriptor descriptor) {
+        List<Field> simpleRelationFileds = new LinkedList<Field>(descriptor.getEntityRelatedFields());
+        simpleRelationFileds.addAll(descriptor.getOneToManyFields());
+
+        for (Field field : simpleRelationFileds) {
+            RelationDescriptor relationDescriptor = descriptor.getRelationDescriptorForField(field);
+            Class<?> relationHoldingEntityClass = relationDescriptor.getRelationHoldingEntity();
+            if (relationHoldingEntityClass == cls) {
+                continue;
+            }
+
+            AnutaQueryBuilder queryBuilder = updateQueryBuilderMap.get(relationHoldingEntityClass);
+            if (queryBuilder == null) {
+                queryBuilder = entityManager.getQueryBuilder(relationHoldingEntityClass);
+                updateQueryBuilderMap.put(relationHoldingEntityClass, queryBuilder);
+            }
+
+            String foreignKeyColumn = relationDescriptor.getRelationColumnName();
+            Field foreignKeyField = Anuta.databaseTools.getFieldForColumnName(foreignKeyColumn, cls);
+            Object val = Anuta.reflectionTools.getValue(foreignKeyField, entityToDelete);
+
+            if (val == null) {
+                continue;
+            }
+
+            String columnToUpdate = relationDescriptor.getJoinReferencedRelationColumnName();
+            ContentValues contentValues = updateRelationsValuesMap.get(queryBuilder);
+            if (contentValues == null) {
+                contentValues = new ContentValues();
+                updateRelationsValuesMap.put(queryBuilder, contentValues);
+            }
+            contentValues.putNull(columnToUpdate);
+            queryBuilder.or(queryBuilder.equal(columnToUpdate, String.valueOf(val)));
+        }
+    }
+
+    private void updateRemoveManyToManyRelationQuery(Map<Uri, AnutaQueryBuilder> deleteQueryBuilderMap, Class<?> cls,
+                                                     Object entityToDelete, EntityDescriptor descriptor) {
+        List<Field> manyToManyFields = descriptor.getManyToManyFields();
+        for (Field field : manyToManyFields) {
+
+            RelationDescriptor relationDescriptor = descriptor.getRelationDescriptorForField(field);
+            String relationTableName = relationDescriptor.getRelationTable();
+            Uri relationTableUri = Anuta.databaseTools.buildUriForTableName(relationTableName, descriptor.getAuthority());
+
+            Field relationField = Anuta.databaseTools.getFieldForColumnName(relationDescriptor.getRelationColumnName(), cls);
+            Object val = Anuta.reflectionTools.getValue(relationField, entityToDelete);
+
+            if (val != null) {
+                AnutaQueryBuilder queryBuilder = deleteQueryBuilderMap.get(relationTableUri);
+                if (queryBuilder == null) {
+                    queryBuilder = entityManager.getQueryBuilder(cls);
+                    deleteQueryBuilderMap.put(relationTableUri, queryBuilder);
+                }
+                queryBuilder.or(queryBuilder.equal(relationDescriptor.getJoinRelationColumnName(), String.valueOf(val)));
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private AnutaQueryWithUri wrapQuery(AnutaQuery query, final Uri uri) {
+        return new AnutaQueryWrapper(query) {
+            @Override
+            public Uri getUri() {
+                return uri;
+            }
+        };
     }
 }
