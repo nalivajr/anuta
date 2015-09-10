@@ -14,7 +14,7 @@ import java.lang.annotation.Target;
 public @interface Entity {
     /**
      * Specifies unique name of entity. By default full class name will be used.
-     * <p/>
+     * <p>
      * Be aware to use default name as if class will be renamed or placed to another package then database information can become inconsistent
      *
      * @return the unique name of entity
@@ -22,7 +22,7 @@ public @interface Entity {
     String name() default "";
     /**
      * Specifies unique name of tablet for entity. By default {@link Class#getSimpleName()} will be used.
-     * <p/>
+     * <p>
      * Be aware to use default name as if class will be renamed then database information can become inconsistent
      *
      * @return the unique name of entity
