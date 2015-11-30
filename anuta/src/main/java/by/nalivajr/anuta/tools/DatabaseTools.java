@@ -469,7 +469,7 @@ public final class DatabaseTools {
      */
     public <T> Long getRowId(T entity) {
         if (entity instanceof Persistable) {
-            ((Persistable) entity).getRowId();
+            return ((Persistable) entity).getRowId();
         }
         Field[] fields = entity.getClass().getDeclaredFields();
         Field target = null;

@@ -391,8 +391,7 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
      * @return saved entity instance
      */
     protected <T> T saveEntity(T entity, EntityDescriptor descriptor) {
-
-        Long rowId = Anuta.databaseTools.getRowId(entity);
+        Long rowId = getRowId(entity);
         if (!isNewEntityRowId(rowId)) {
             updateEntity(entity, descriptor);
             return entity;
@@ -454,7 +453,7 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
             if (!cascadeSave && !cascadeUpdate) {
                 continue;
             }
-            Long rowId = Anuta.databaseTools.getRowId(related);
+            Long rowId = getRowId(related);
             if (isNewEntityRowId(rowId) && cascadeSave) {
                 save(related);
             } else if (cascadeUpdate) {
@@ -478,7 +477,7 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
                 continue;
             }
             for (Object relatedEntity : relatedCollection) {
-                Long rowId = Anuta.databaseTools.getRowId(relatedEntity);
+                Long rowId = getRowId(relatedEntity);
                 if (isNewEntityRowId(rowId) && cascadeSave) {
                     save(relatedEntity);
                 } else if (cascadeUpdate) {
@@ -495,7 +494,7 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
      * @return true if entity is found in cache and false otherwise
      */
     protected <T> boolean isInCache(T entity, EntityCache cache) {
-        Long rowId = Anuta.databaseTools.getRowId(entity);
+        Long rowId = getRowId(entity);
         return cache.containsEntity(entity.getClass(), rowId);
     }
 
@@ -531,7 +530,7 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
      * @param descriptor the descriptor of the entity
      */
     protected <T> void updateEntity(T entity, EntityDescriptor descriptor) {
-        Long rowId = Anuta.databaseTools.getRowId(entity);
+        Long rowId = getRowId(entity);
         if (isNewEntityRowId(rowId)) {
             saveEntity(entity, descriptor);
             return;
@@ -577,7 +576,7 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
     protected <T> ArrayList<ContentProviderOperation> generateOperationsToUpdate(Uri uri, T entity) {
         ArrayList<ContentProviderOperation> operations = new ArrayList<ContentProviderOperation>();
 
-        Long rowId = Anuta.databaseTools.getRowId(entity);
+        Long rowId = getRowId(entity);
         if (isNewEntityRowId(rowId)) {
             operations.addAll(generateOperationsToSave(uri, entity));
             return operations;
@@ -607,7 +606,7 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
     private <T> ArrayList<ContentProviderOperation> generateOperationsToDelete(T entity, EntityDescriptor descriptor) {
 
         Uri uri = descriptor.getTableUri();
-        Long rowId = Anuta.databaseTools.getRowId(entity);
+        Long rowId = getRowId(entity);
         if (rowId == null || rowId == 0) {
             // entity not saved. No need to delete
             return new ArrayList<ContentProviderOperation>();
@@ -852,5 +851,13 @@ public abstract class AbstractEntityManager implements AnutaEntityManager {
     protected <T> void putDeleteManyToManyRelationOperation(T entity, ArrayList<ContentProviderOperation> operations,
                                                           Class<?> entityClass, EntityDescriptor entityDescriptor) {
         relationsHelper.putDeleteManyToManyRelationOperation(entity, operations, entityClass, entityDescriptor);
+    }
+
+    protected  <T> Long getRowId(T entity) {
+        if (entity instanceof Persistable) {
+            return ((Persistable) entity).getRowId();
+        }
+        Field rowIdField = entityToDescriptor.get(entity.getClass()).getRowIdField();
+        return Long.class.cast(Anuta.reflectionTools.getValue(rowIdField, entity));
     }
 }

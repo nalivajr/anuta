@@ -159,7 +159,7 @@ public final class EntityManagerRelationsHelper {
             if (relatedEntity == null) {
                 continue;
             }
-            Long relatedEntityRowId = Anuta.databaseTools.getRowId(relatedEntity);
+            Long relatedEntityRowId = getRowId(relatedEntity);
             if (relatedEntityRowId == null || relatedEntityRowId == 0) {
                 continue;
             }
@@ -179,7 +179,7 @@ public final class EntityManagerRelationsHelper {
                 relationColumnName = relationDescriptor.getRelationReferencedColumnName();
                 keyField = Anuta.databaseTools.getFieldForColumnName(relationColumnName, relatedEntity.getClass());
                 keySource = relatedEntity;
-                relatedEntityRowId = Anuta.databaseTools.getRowId(entity);
+                relatedEntityRowId = getRowId(entity);
             }
 
             Object value = Anuta.reflectionTools.getValue(keyField, keySource);
@@ -216,7 +216,7 @@ public final class EntityManagerRelationsHelper {
 
             for (Object relatedEntity : relatedEntityCollection) {
 
-                Long relatedEntityRowId = Anuta.databaseTools.getRowId(relatedEntity);
+                Long relatedEntityRowId = getRowId(relatedEntity);
                 if (relatedEntityRowId == null || relatedEntityRowId == 0) {
                     continue;
                 }
@@ -340,7 +340,7 @@ public final class EntityManagerRelationsHelper {
         if (entity == null) {
             return;
         }
-        Long rowId = Anuta.databaseTools.getRowId(entity);
+        Long rowId = getRowId(entity);
         if (rowId == null || rowId == 0) {
             return;
         }
@@ -529,5 +529,10 @@ public final class EntityManagerRelationsHelper {
                 return uri;
             }
         };
+    }
+
+    private  <T> Long getRowId(T entity) {
+        Field rowIdField = entityToDescriptor.get(entity.getClass()).getRowIdField();
+        return Long.class.cast(Anuta.reflectionTools.getValue(rowIdField, entity));
     }
 }
