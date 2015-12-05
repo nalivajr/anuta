@@ -171,13 +171,13 @@ public final class EntityManagerRelationsHelper {
 
             String column = relationDescriptor.getJoinReferencedRelationColumnName();       // parent_id column in child
             String relationColumnName = relationDescriptor.getRelationColumnName();         // column in this entity
-            Field keyField = Anuta.databaseTools.getFieldForColumnName(relationColumnName, entityClass);
+            Field keyField = descriptor.getFieldForColumn(relationColumnName);
             Object keySource = entity;
 
             if (entityClass == relationHoldingEntityClass) {
                 column = relationDescriptor.getJoinRelationColumnName();
                 relationColumnName = relationDescriptor.getRelationReferencedColumnName();
-                keyField = Anuta.databaseTools.getFieldForColumnName(relationColumnName, relatedEntity.getClass());
+                keyField = entityToDescriptor.get(relatedEntity.getClass()).getFieldForColumn(relationColumnName);
                 keySource = relatedEntity;
                 relatedEntityRowId = getRowId(entity);
             }
@@ -211,7 +211,7 @@ public final class EntityManagerRelationsHelper {
             String column = relationDescriptor.getJoinReferencedRelationColumnName();       // parent_id column in child
             String relationColumnName = relationDescriptor.getRelationColumnName();         // column in this entity
 
-            Field keyField = Anuta.databaseTools.getFieldForColumnName(relationColumnName, entityClass);
+            Field keyField = descriptor.getFieldForColumn(relationColumnName);
             Object value = Anuta.reflectionTools.getValue(keyField, entity);
 
             for (Object relatedEntity : relatedEntityCollection) {
@@ -252,14 +252,14 @@ public final class EntityManagerRelationsHelper {
 
             for (Object related : relatedCollection) {
                 ContentValues contentValues = new ContentValues();
-                Field keyField = Anuta.databaseTools.getFieldForColumnName(relationColumnName, entityClass);
+                Field keyField = descriptor.getFieldForColumn(relationColumnName);
                 Object entityKey = Anuta.reflectionTools.getValue(keyField, entity);
                 if (entityKey == null) {
                     continue;
                 }
                 Anuta.databaseTools.putValue(contentValues, joinRelationColumnName, entityKey);
 
-                Field keyRefField = Anuta.databaseTools.getFieldForColumnName(relationReferencedColumnName, related.getClass());
+                Field keyRefField = entityToDescriptor.get(related.getClass()).getFieldForColumn(relationReferencedColumnName);
                 Object entityRelKey = Anuta.reflectionTools.getValue(keyRefField, related);
                 if (entityRelKey == null) {
                     continue;
@@ -292,7 +292,7 @@ public final class EntityManagerRelationsHelper {
 
         ContentProviderOperation.Builder updateRelationOperationBuilder = ContentProviderOperation.newUpdate(relationTableUri);
         String foreignKeyColumn = relationDescriptor.getRelationColumnName();
-        Field foreignKeyField = Anuta.databaseTools.getFieldForColumnName(foreignKeyColumn, entityClass);
+        Field foreignKeyField = entityDescriptor.getFieldForColumn(foreignKeyColumn);
         Object val = Anuta.reflectionTools.getValue(foreignKeyField, entity);
 
         if (val == null) {
@@ -314,7 +314,7 @@ public final class EntityManagerRelationsHelper {
         Uri relationTableUri = Anuta.databaseTools.buildUriForTableName(relationTableName, entityDescriptor.getAuthority());
 
         String selection = relationDescriptor.getJoinRelationColumnName() + " = ?";
-        Field relationField = Anuta.databaseTools.getFieldForColumnName(relationDescriptor.getRelationColumnName(), entityClass);
+        Field relationField = entityDescriptor.getFieldForColumn(relationDescriptor.getRelationColumnName());
         Object val = Anuta.reflectionTools.getValue(relationField, entity);
         if (val != null) {
             String[] selectionArgs = new String[]{String.valueOf(val)};
@@ -480,7 +480,7 @@ public final class EntityManagerRelationsHelper {
             }
 
             String foreignKeyColumn = relationDescriptor.getRelationColumnName();
-            Field foreignKeyField = Anuta.databaseTools.getFieldForColumnName(foreignKeyColumn, cls);
+            Field foreignKeyField = entityToDescriptor.get(cls).getFieldForColumn(foreignKeyColumn);
             Object val = Anuta.reflectionTools.getValue(foreignKeyField, entityToDelete);
 
             if (val == null) {
@@ -507,7 +507,7 @@ public final class EntityManagerRelationsHelper {
             String relationTableName = relationDescriptor.getRelationTable();
             Uri relationTableUri = Anuta.databaseTools.buildUriForTableName(relationTableName, descriptor.getAuthority());
 
-            Field relationField = Anuta.databaseTools.getFieldForColumnName(relationDescriptor.getRelationColumnName(), cls);
+            Field relationField = entityToDescriptor.get(cls).getFieldForColumn(relationDescriptor.getRelationColumnName());
             Object val = Anuta.reflectionTools.getValue(relationField, entityToDelete);
 
             if (val != null) {

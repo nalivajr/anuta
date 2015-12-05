@@ -78,7 +78,8 @@ public abstract class AnutaRelationalEntityManager extends AbstractEntityManager
             Object foreignKey = null;
             if (parent != null) {
                 String parentColumnName = relationDescriptor.getRelationReferencedColumnName();
-                Field relationFieldInParent = Anuta.databaseTools.getFieldForColumnName(parentColumnName, parent.getClass());
+                EntityDescriptor parentDescriptor = entityToDescriptor.get(parent.getClass());
+                Field relationFieldInParent = parentDescriptor.getFieldForColumn(parentColumnName);
                 foreignKey = Anuta.reflectionTools.getValue(relationFieldInParent, parent);
             }
             Anuta.databaseTools.putValue(contentValues, relationDescriptor.getJoinRelationColumnName(), foreignKey);
