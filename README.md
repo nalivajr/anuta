@@ -21,7 +21,7 @@ All Anuta's tools can be accessed using instances of util classes, which are ins
 In source code you can find two modules: anuta and app. Module `anuta` contains all the code of library. It can be compiled to .aar and used in other applications. Module `app` contains sample activities, which can help to anderstand how to use Anuta.
 
 ## News
-Version v0.2.0 released
+#### Version v0.2.0 released
 
 1. The code was moved to by.nalivajr package.
 2. Cursor-like logic, which helps to iterate elements in database
@@ -29,7 +29,7 @@ Version v0.2.0 released
 4. Async Entity Manager allows to access database in background thread and receive result in callback.
 5. New adapters and also a number of utils methods for adapters creation
 
-Version v0.3.0 released.
+#### Version v0.3.0 released.
 
 1. Alice was renamed to Anuta
 2. The component, for background task execution and optional UI notification was added.
@@ -37,3 +37,18 @@ Version v0.3.0 released.
 4. QueryBuilder was extended
 5. Entity Cursor can be configured to auto-requery updated data
 6. Background task execution
+
+#### Version v0.3.1 released.
+
+1. Test for Anuta entity manager were added
+2. MIME-types can be specified for entities
+3. LazyCollection introduced to represent not loaded related items collections.
+4. The ability to specify cascade insert/update/delete strategies for related entities
+5. Cascade deletetion was added
+
+#### Version v0.3.2 released.
+
+1. Anuta is available from Maven repository
+2. Improving performance for Anuta ORM
+3. Extending availability for new Android versions
+4. Fixing issues
