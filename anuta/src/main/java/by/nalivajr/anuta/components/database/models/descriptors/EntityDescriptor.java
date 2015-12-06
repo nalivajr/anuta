@@ -46,6 +46,7 @@ public class EntityDescriptor {
     private List<Field> manyToManyFields;
 
     private Map<Field, ColumnDescriptor> fieldsToDescriptorMap;
+    private Map<String, Field> columnNameToField;
     private Map<Field, RelationDescriptor> fieldsToRelationDescriptorMap;
     private Map<Field, RelationQueryDescriptor> fieldsToRelationQueryDescriptorMap;
 
@@ -140,6 +141,11 @@ public class EntityDescriptor {
         fields = Collections.unmodifiableList(fields);
         indexFields = Collections.unmodifiableList(indexFields);
         fieldsToDescriptorMap = Collections.unmodifiableMap(fieldsToDescriptorMap);
+        columnNameToField = new HashMap<>();
+        for (Field field : fieldsToDescriptorMap.keySet()) {
+            ColumnDescriptor columnDescriptor = fieldsToDescriptorMap.get(field);
+            columnNameToField.put(columnDescriptor.getColumnName(), field);
+        }
     }
 
     private void initRelationsMap() {
@@ -253,6 +259,10 @@ public class EntityDescriptor {
 
     public RelationQueryDescriptor getRelationQueryDescriptorForField(Field field) {
         return fieldsToRelationQueryDescriptorMap.get(field);
+    }
+
+    public Field getFieldForColumn(String columnName) {
+        return columnNameToField.get(columnName);
     }
 
 

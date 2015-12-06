@@ -1,15 +1,20 @@
 package by.nalivajr.anuta.components.database.providers;
 
 import android.content.ContentProvider;
+import android.content.ContentProviderOperation;
+import android.content.ContentProviderResult;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.ContentValues;
+import android.content.OperationApplicationException;
 import android.content.UriMatcher;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
+import android.support.annotation.NonNull;
 import android.util.Log;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -84,14 +89,10 @@ public abstract class AnutaContentProvider extends ContentProvider {
 
         SQLiteDatabase database = helper.getWritableDatabase();
         try {
-            database.beginTransaction();
             rowId = database.insert(tableName, null, values);
-            database.setTransactionSuccessful();
         } catch (Throwable e) {
             Log.e(TAG, "Could not insert data", e);
             throw new RuntimeException(e);
-        } finally {
-            database.endTransaction();
         }
         if (rowId == -1) {
             throw new RuntimeException("Could not save to database. Incorrect data.");
@@ -118,14 +119,10 @@ public abstract class AnutaContentProvider extends ContentProvider {
 
         SQLiteDatabase database = helper.getWritableDatabase();
         try {
-            database.beginTransaction();
             deleted = database.delete(tableName, selection, selectionArgs);
-            database.setTransactionSuccessful();
         } catch (Throwable e) {
             Log.e(TAG, "Could not delete data", e);
             throw new RuntimeException(e);
-        } finally {
-            database.endTransaction();
         }
         notifyObservers(uri);
         return deleted;
@@ -142,14 +139,10 @@ public abstract class AnutaContentProvider extends ContentProvider {
 
         SQLiteDatabase database = helper.getWritableDatabase();
         try {
-            database.beginTransaction();
             updated = database.update(tableName, values, selection, selectionArgs);
-            database.setTransactionSuccessful();
         } catch (Throwable e) {
             Log.e(TAG, "Could not update data", e);
             throw new RuntimeException(e);
-        } finally {
-            database.endTransaction();
         }
         notifyObservers(uri);
         return updated;
@@ -238,5 +231,22 @@ public abstract class AnutaContentProvider extends ContentProvider {
             }
         }
         return mimeTypeCode;
+    }
+
+    @NonNull
+    @Override
+    public ContentProviderResult[] applyBatch(ArrayList<ContentProviderOperation> operations) throws OperationApplicationException {
+        SQLiteDatabase database = helper.getWritableDatabase();
+        database.beginTransaction();
+        try {
+            ContentProviderResult[] contentProviderResults = super.applyBatch(operations);
+            database.setTransactionSuccessful();
+            return contentProviderResults;
+        } catch (Throwable e) {
+            Log.e(TAG, "Could not apply batch", e);
+            throw new RuntimeException(e);
+        } finally {
+            database.endTransaction();
+        }
     }
 }

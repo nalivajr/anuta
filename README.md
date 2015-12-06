@@ -45,3 +45,10 @@ In source code you can find two modules: anuta and app. Module `anuta` contains 
 3. LazyCollection introduced to represent not loaded related items collections.
 4. The ability to specify cascade insert/update/delete strategies for related entities
 5. Cascade deletetion was added
+
+#### Version v0.3.2 released.
+
+1. Anuta is available from Maven repository
+2. Improving performance for Anuta ORM
+3. Extending availability for new Android versions
+4. Fixing issues
