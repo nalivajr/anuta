@@ -20,6 +20,17 @@ All Anuta's tools can be accessed using instances of util classes, which are ins
 ## Samples
 In source code you can find two modules: anuta and app. Module `anuta` contains all the code of library. It can be compiled to .aar and used in other applications. Module `app` contains sample activities, which can help to anderstand how to use Anuta.
 
+## Repository
+### Maven
+`<dependency>`
+	`<groupId>com.github.nalivajr</groupId>`
+	`<artifactId>anuta</artifactId>`
+	`<version>1.0.1-beta</version>`
+`</dependency>`
+
+### Gradle
+`compile 'com.github.nalivajr:anuta:1.0.1-beta'`
+
 ## News
 #### Version v0.2.0 released
 
