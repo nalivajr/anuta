@@ -46,7 +46,7 @@ public final class AdapterTools {
      * by yourself, if needed
      * @param context the context
      * @param resLayoutsIds a set of ids for layouts to be parsed
-     * @return the map, which contains pairs: layout-resource-id -> list of ids of widgets from this layout
+     * @return the map, which contains pairs: layout-resource-id to list of ids of widgets from this layout
      */
     public Map<Integer, List<Integer>> buildIdsMap(Context context , int ... resLayoutsIds) {
         Map<Integer, List<Integer>> result = new HashMap<Integer, List<Integer>>();

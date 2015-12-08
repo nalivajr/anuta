@@ -116,7 +116,7 @@ public interface AnutaEntityCursor<T> extends Iterator<T> {
 
     /**
      * Refreshes cursor data in background thread.
-     * @see {@link AnutaEntityCursor#requery(ActionCallback)}
+     * @see AnutaEntityCursor#requery(ActionCallback)
      */
     void requery();
 

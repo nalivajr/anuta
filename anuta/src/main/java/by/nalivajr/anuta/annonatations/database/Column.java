@@ -15,7 +15,7 @@ public @interface Column {
 
     /**
      * Represents the name of column. By default property name will be used.
-     * <br/>
+     * <br>
      * Be aware using default value as if property will be renamed then database information become inconsistent
      * @return the name of column to store annotated property.
      */

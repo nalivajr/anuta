@@ -18,7 +18,7 @@ public interface DataProvider<T> {
      * Provides the item by it's position
      * @param position the position of the item
      * @return item on the given position
-     * @throws IndexOutOfBoundsException if index >= {@link DataProvider#count()}
+     * @throws IndexOutOfBoundsException if index greater or equal to {@link DataProvider#count()}
      */
     public T getItem(int position);
 
