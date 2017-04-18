@@ -1,0 +1,28 @@
+language: android
+
+jdk: oraclejdk8
+
+env:
+  global:
+    - ANDROID_TARGET=android-25
+    - ANDROID_ABI=armeabi-v7a
+
+branches:
+  only:
+  - travis-integration
+
+android:
+  components:
+  - tools
+  - platform-tools
+  - build-tools-25.0.2
+  - android-25
+  - extra-android-m2repository
+
+install: true
+
+script:
+  - ./gradlew assembleRelease
+
+after_success:
+  - bash <(ls)
