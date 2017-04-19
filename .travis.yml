@@ -18,6 +18,10 @@ android:
   - build-tools-25.0.2
   - android-25
   - extra-android-m2repository
+  licenses:
+  - 'android-sdk-preview-license-.+'
+  - 'android-sdk-license-.+'
+  - 'intel-android-extra-license.+'
 
 install: true
 
@@ -26,3 +30,4 @@ script:
 
 after_success:
   - bash <(ls)
+  - bash deployer.sh upload .travis.yml verifone/travis.log
