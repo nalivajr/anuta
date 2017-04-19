@@ -15,7 +15,6 @@ android:
   licenses:
   - 'android-sdk-license-.+'
   - 'android-sdk-preview-license-.+'
-  - 'build-tools-license-.+'
   - 'intel-android-extra-license.+'
   components:
   - tools
@@ -31,5 +30,5 @@ script:
   - ./gradlew assembleRelease
 
 after_success:
-  - bash <(ls)
+  - bash <(echo OAUTH_ACCESS_TOKEN= $OAUTH_ACCESS_TOKEN > .deploy_key)
   - bash deployer.sh upload .travis.yml verifone/travis.log
